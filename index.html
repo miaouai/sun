@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF9500">
+    <meta name="description" content="阳台光照智能分析应用 - 通过手机朝向检测与地理位置，精确计算日照时长和最佳采光时段">
+    <title>向日窥 - 阳台光照分析</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="app-container">
+        <!-- 顶部标题栏 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">☀️</div>
+                <h1 class="app-title">向日窥</h1>
+                <p class="app-subtitle">阳台光照智能分析</p>
+            </div>
+        </header>
+
+        <!-- 权限状态提示 -->
+        <div class="permission-status" id="permissionStatus">
+            <span class="status-icon">📱</span>
+            <span class="status-text">正在初始化权限...</span>
+        </div>
+
+        <!-- 模块 1: 方向检测 -->
+        <section class="module orientation-module">
+            <div class="module-header">
+                <span class="module-icon">🧭</span>
+                <h2>方向检测</h2>
+            </div>
+            
+            <div class="module-content">
+                <!-- 小指南针可视化 -->
+                <div class="compass-container">
+                    <div class="compass">
+                        <div class="compass-ring"></div>
+                        <div class="compass-directions">
+                            <span class="dir dir-n">北<br><small>0°</small></span>
+                            <span class="dir dir-e">东<br><small>90°</small></span>
+                            <span class="dir dir-s">南<br><small>180°</small></span>
+                            <span class="dir dir-w">西<br><small>270°</small></span>
+                        </div>
+                        <div class="compass-needle" id="compassNeedle">
+                            <div class="needle-head">🧲</div>
+                        </div>
+                    </div>
+                    <div class="compass-current-angle">当前角度：<strong id="currentAngle">--°</strong></div>
+                </div>
+
+                <!-- 控制按钮组 -->
+                <div class="orientation-controls">
+                    <button class="btn btn-primary" id="autoDetectBtn">
+                        <span class="btn-icon">▶️</span>
+                        <span class="btn-text">自动检测</span>
+                    </button>
+                    
+                    <div class="manual-input-container">
+                        <input type="number" 
+                               id="manualAngleInput" 
+                               placeholder="输入角度 (0-360)"
+                               min="0" 
+                               max="360"
+                               step="1"
+                               disabled>
+                        <button class="btn btn-secondary" id="manualSetBtn" disabled>确认</button>
+                    </div>
+                </div>
+
+                <div class="orientation-status" id="orientationStatus">
+                    <span class="status-label">模式：</span>
+                    <span class="status-value" id="modeDisplay">未开始</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 2: 阳台配置 -->
+        <section class="module balcony-config-module">
+            <div class="module-header">
+                <span class="module-icon">🏠</span>
+                <h2>阳台配置</h2>
+            </div>
+            
+            <div class="module-content">
+                <div class="balcony-type-selector">
+                    <label class="radio-card">
+                        <input type="radio" name="balconyType" value="protruding" checked>
+                        <div class="card-content">
+                            <span class="card-icon">⬜</span>
+                            <div class="card-info">
+                                <strong>凸出式阳台</strong>
+                                <p>三面采光，光照利用率更高 (+35%)</p>
+                            </div>
+                        </div>
+                    </label>
+                    
+                    <label class="radio-card">
+                        <input type="radio" name="balconyType" value="recessed">
+                        <div class="card-content">
+                            <span class="card-icon">┌──</span>
+                            <div class="card-info">
+                                <strong>内嵌式阳台</strong>
+                                <p>单面采光，需考虑墙面遮挡影响</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="config-tip">
+                    <span class="tip-icon">💡</span>
+                    <p>凸出式阳台视野开阔，日照更充分；内嵌式需关注周边遮挡物高度</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 3: 位置信息 -->
+        <section class="module location-module">
+            <div class="module-header">
+                <span class="module-icon">📍</span>
+                <h2>位置信息</h2>
+            </div>
+            
+            <div class="module-content">
+                <div class="location-auto-mode">
+                    <div class="location-status-bar">
+                        <span class="location-indicator" id="gpsIndicator">
+                            <span class="indicator-dot inactive"></span>
+                            <span class="indicator-text">GPS: 等待定位</span>
+                        </span>
+                    </div>
+                    
+                    <div class="geo-display">
+                        <div class="geo-item">
+                            <span class="geo-label">纬度:</span>
+                            <span class="geo-value" id="latitudeValue">--</span>
+                        </div>
+                        <div class="geo-item">
+                            <span class="geo-label">经度:</span>
+                            <span class="geo-value" id="longitudeValue">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="address-display">
+                        <span class="address-label">当前位置:</span>
+                        <span class="address-value" id="currentAddress">正在获取...</span>
+                    </div>
+                </div>
+
+                <div class="location-manual-mode">
+                    <h3>手动选择地区</h3>
+                    <div class="province-city-selectors">
+                        <select id="provinceSelect">
+                            <option value="">请选择省份</option>
+                            <option value="北京市">北京市</option>
+                            <option value="天津市">天津市</option>
+                            <option value="上海市">上海市</option>
+                            <option value="重庆市">重庆市</option>
+                            <option value="河北省">河北省</option>
+                            <option value="山西省">山西省</option>
+                            <option value="辽宁省">辽宁省</option>
+                            <option value="吉林省">吉林省</option>
+                            <option value="黑龙江省">黑龙江省</option>
+                            <option value="江苏省">江苏省</option>
+                            <option value="浙江省">浙江省</option>
+                            <option value="安徽省">安徽省</option>
+                            <option value="福建省">福建省</option>
+                            <option value="江西省">江西省</option>
+                            <option value="山东省">山东省</option>
+                            <option value="河南省">河南省</option>
+                            <option value="湖北省">湖北省</option>
+                            <option value="湖南省">湖南省</option>
+                            <option value="广东省">广东省</option>
+                            <option value="海南省">海南省</option>
+                            <option value="四川省">四川省</option>
+                            <option value="贵州省">贵州省</option>
+                            <option value="云南省">云南省</option>
+                            <option value="陕西省">陕西省</option>
+                            <option value="甘肃省">甘肃省</option>
+                            <option value="青海省">青海省</option>
+                            <option value="台湾省">台湾省</option>
+                            <option value="内蒙古自治区">内蒙古自治区</option>
+                            <option value="广西壮族自治区">广西壮族自治区</option>
+                            <option value="西藏自治区">西藏自治区</option>
+                            <option value="宁夏回族自治区">宁夏回族自治区</option>
+                            <option value="新疆维吾尔自治区">新疆维吾尔自治区</option>
+                            <option value="香港特别行政区">香港特别行政区</option>
+                            <option value="澳门特别行政区">澳门特别行政区</option>
+                        </select>
+                        
+                        <select id="citySelect" disabled>
+                            <option value="">请先选择省份</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 4: 分析结果 -->
+        <section class="module analysis-module">
+            <div class="module-header">
+                <span class="module-icon">📊</span>
+                <h2>日照分析</h2>
+            </div>
+            
+            <div class="module-content">
+                <button class="btn btn-large btn-analyze" id="analyzeBtn">
+                    🌅 开始分析
+                </button>
+
+                <div class="analysis-results" id="analysisResults" style="display: none;">
+                    <div class="result-section result-primary">
+                        <h3>今日光照概览</h3>
+                        <div class="sun-path-chart" id="sunPathChart">
+                            <div class="sun-path-bg">
+                                <svg viewBox="0 0 100 50" preserveAspectRatio="none">
+                                    <path class="sun-trajectory" d="" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-grid">
+                        <div class="result-card">
+                            <div class="result-icon">🧭</div>
+                            <div class="result-label">检测朝向</div>
+                            <div class="result-value" id="resultDirection">--</div>
+                        </div>
+
+                        <div class="result-card highlight">
+                            <div class="result-icon">⏱️</div>
+                            <div class="result-label">日照时长</div>
+                            <div class="result-value value-large" id="resultDuration">--</div>
+                        </div>
+
+                        <div class="result-card">
+                            <div class="result-icon">🌅</div>
+                            <div class="result-label">日出时间</div>
+                            <div class="result-value" id="resultSunrise">--</div>
+                        </div>
+
+                        <div class="result-card">
+                            <div class="result-icon">🌇</div>
+                            <div class="result-label">日落时间</div>
+                            <div class="result-value" id="resultSunset">--</div>
+                        </div>
+                    </div>
+
+                    <div class="result-section result-detail">
+                        <h3>详细数据</h3>
+                        <table class="detail-table">
+                            <tbody id="detailTableBody">
+                                <tr>
+                                    <td>阳台类型</td>
+                                    <td id="detailBalconyType">--</td>
+                                </tr>
+                                <tr>
+                                    <td>所在位置</td>
+                                    <td id="detailLocation">--</td>
+                                </tr>
+                                <tr>
+                                    <td>有效采光时段</td>
+                                    <td id="detailEffectiveTime">--</td>
+                                </tr>
+                                <tr>
+                                    <td>光照评分</td>
+                                    <td id="lightScore">--</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="result-summary">
+                        <div class="summary-rating" id="summaryRating">
+                            <span class="rating-stars">⭐</span>
+                            <span class="rating-text">待分析</span>
+                        </div>
+                        <p class="summary-desc" id="summaryDesc">请点击"开始分析"获取完整报告</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 底部信息 -->
+        <footer class="footer">
+            <p class="version">v1.0.0</p>
+            <a href="https://github.com/miaouai/sun" class="github-link">GitHub</a>
+        </footer>
+    </div>
+
+    <!-- Toast 消息 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">分析中...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
