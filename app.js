@@ -172,6 +172,8 @@
     }
 
     // ===== 方向检测模块 =====
+    let orientationHandler = null; // 保存事件处理器引用
+
     function setupCompassControls() {
         const autoBtn = document.getElementById('autoDetectBtn');
         const manualInput = document.getElementById('manualAngleInput');
@@ -201,7 +203,7 @@
             btn.classList.add('active');
             btn.querySelector('.btn-icon').textContent = '⏹️';
             btn.querySelector('.btn-text').textContent = '停止检测';
-            document.getElementById('modeDisplay').textContent = '自动检测中';
+            document.getElementById('modeDisplay').textContent = '自动检测中...';
             document.getElementById('modeDisplay').style.color = '#34C759';
             
             // 禁用手动输入
@@ -213,37 +215,57 @@
             btn.classList.remove('active');
             btn.querySelector('.btn-icon').textContent = '▶️';
             btn.querySelector('.btn-text').textContent = '自动检测';
-            document.getElementById('modeDisplay').textContent = `已停止 (${AppState.currentAzimuth}°)`;
+            document.getElementById('modeDisplay').textContent = `已停止 (${AppState.currentAzimuth !== null ? AppState.currentAzimuth : '--'}°)`;
             document.getElementById('modeDisplay').style.color = '#FF9500';
             
             stopOrientationListener();
+            
+            // 启用手动输入
+            document.getElementById('manualAngleInput').disabled = false;
+            document.getElementById('manualSetBtn').disabled = false;
         }
     }
 
     function startOrientationListener() {
-        function handleOrientation(event) {
+        // 创建命名函数以便后续移除
+        orientationHandler = function(event) {
             let azimuth;
+            
+            // iOS 设备使用 webkitCompassHeading
             if (event.webkitCompassHeading !== undefined) {
-                azimuth = event.webkitCompassHeading; // iOS
-            } else if (event.alpha !== undefined) {
-                azimuth = 360 - event.alpha; // Android（需校准）
+                azimuth = event.webkitCompassHeading;
+                console.log('[iOS] Compass Heading:', azimuth);
+            }
+            // Android 设备使用 alpha（需要 deviceorientationabsolute 或校准）
+            else if (event.alpha !== undefined) {
+                // 注意：Android 的 alpha 是相对于设备的初始方向，不是绝对北
+                // 在 landscape 模式下需要调整
+                azimuth = 360 - event.alpha;
+                if (azimuth < 0) azimuth += 360;
+                console.log('[Android] Alpha:', event.alpha, '-> Azimuth:', azimuth);
             }
             
-            if (azimuth != null && typeof azimuth === 'number') {
+            if (azimuth != null && typeof azimuth === 'number' && !isNaN(azimuth)) {
                 azimuth = Math.round(azimuth % 360);
                 AppState.currentAzimuth = azimuth;
                 updateCompassNeedle(azimuth);
                 document.getElementById('currentAngle').textContent = azimuth + '°';
             }
-        }
+        };
         
-        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        // 注册监听器
+        window.addEventListener('deviceorientationabsolute', orientationHandler, true);
+        window.addEventListener('deviceorientation', orientationHandler, true);
+        console.log('✅ 方向传感器监听已启动');
     }
 
     function stopOrientationListener() {
-        window.removeEventListener('deviceorientationabsolute', () => {}, true);
-        window.removeEventListener('deviceorientation', () => {}, true);
+        if (orientationHandler) {
+            window.removeEventListener('deviceorientationabsolute', orientationHandler, true);
+            window.removeEventListener('deviceorientation', orientationHandler, true);
+            orientationHandler = null;
+            console.log('⏹️ 方向传感器监听已停止');
+        }
     }
 
     function setManualDirection(angle) {
@@ -257,8 +279,9 @@
 
     function updateCompassNeedle(azimuth) {
         const needle = document.getElementById('compassNeedle');
-        if (needle) {
-            needle.style.transform = `rotate(${azimuth}deg)`;
+        if (needle && azimuth !== null && azimuth !== undefined) {
+            // transform 的顺序很重要：先居中再旋转
+            needle.style.transform = `translate(-50%, -50%) rotate(${azimuth}deg)`;
         }
     }
 
@@ -445,6 +468,9 @@
 
     // ===== 页面初始化 =====
     document.addEventListener('DOMContentLoaded', function() {
+        // 初始化指针位置为北 (0 度)
+        updateCompassNeedle(0);
+        
         checkAndRequestPermissions();
         setupCompassControls();
         setupBalconyConfig();
