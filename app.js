@@ -13,8 +13,8 @@
         obstructions: [],            // 遮挡列表：['left', 'right', 'top']
         latitude: null,              // 纬度
         longitude: null,             // 经度
-        province: '',                // 省份
-        city: '',                    // 城市
+        locationMode: 'auto',        // 位置模式：'auto'|'manual'
+        cityName: '',                // 城市名称（显示用）
     };
 
     // ===== Toast 提示工具 =====
@@ -81,7 +81,7 @@
         };
     }
 
-    // ===== 权限管理模块 =====
+    // ===== 权限管理模块（简化版）=====
     function checkAndRequestPermissions() {
         const statusEl = document.getElementById('permissionStatus');
         if (!statusEl) return;
@@ -89,10 +89,7 @@
         statusEl.innerHTML = '<span class="status-icon">📡</span><span class="status-text">正在检测设备能力...</span>';
 
         // 检查设备方向传感器支持
-        let hasOrientation = false;
         if (typeof DeviceOrientationEvent !== 'undefined') {
-            hasOrientation = true;
-            
             // iOS 13+ 需要显式请求权限
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
@@ -112,64 +109,9 @@
             statusEl.innerHTML = '<span class="status-icon">ℹ️</span><span class="status-text">设备不支持方向传感器，请使用手动输入</span>';
         }
 
-        // 获取 GPS 位置
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    AppState.latitude = pos.coords.latitude;
-                    AppState.longitude = pos.coords.longitude;
-                    
-                    document.getElementById('latitudeValue').textContent = 
-                        pos.coords.latitude.toFixed(6);
-                    document.getElementById('longitudeValue').textContent = 
-                        pos.coords.longitude.toFixed(6);
-                    
-                    updateLocationUI(true);
-                },
-                err => {
-                    console.log('定位失败:', err.message);
-                    updateLocationUI(false);
-                    showToast('GPS 定位失败，请手动选择地区', 3000);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-    }
-
-    function updateLocationUI(success) {
-        const gpsIndicator = document.getElementById('gpsIndicator');
-        const addrDisplay = document.getElementById('currentAddress');
-        
-        if (success) {
-            if (gpsIndicator) {
-                gpsIndicator.querySelector('.indicator-dot').className = 'indicator-dot active';
-                gpsIndicator.querySelector('.indicator-text').textContent = 'GPS: 定位成功';
-            }
-            if (addrDisplay) {
-                addrDisplay.textContent = '正在解析地址...';
-                // 可以尝试反向地理编码
-                tryReverseGeocode();
-            }
-        } else {
-            if (gpsIndicator) {
-                gpsIndicator.querySelector('.indicator-dot').className = 'indicator-dot inactive';
-                gpsIndicator.querySelector('.indicator-text').textContent = 'GPS: 定位失败';
-            }
-            if (addrDisplay) {
-                addrDisplay.textContent = '定位失败，请手动选择';
-            }
-        }
-    }
-
-    async function tryReverseGeocode() {
-        try {
-            const resp = await fetch('https://api.ip.sb/geocoding');
-            const data = await resp.json();
-            const addrText = data.city ? `${data.city}${data.region ? ', ' + data.region : ''}` : 'IP 定位中...';
-            document.getElementById('currentAddress').textContent = addrText;
-        } catch (e) {
-            console.log('地址解析失败', e);
-            document.getElementById('currentAddress').textContent = `${AppState.latitude?.toFixed(4)}, ${AppState.longitude?.toFixed(4)}`;
+        // 自动定位模式下触发 GPS 定位
+        if (AppState.locationMode === 'auto') {
+            triggerGPSLocation();
         }
     }
 
@@ -597,69 +539,236 @@
     }
 
     // ===== 地区选择模块 =====
-    function setupProvinceCitySelectors() {
-        const provinceSelect = document.getElementById('provinceSelect');
-        const citySelect = document.getElementById('citySelect');
-        
-        if (!provinceSelect || !citySelect) return;
+    // ===== 位置信息模块（重构版 v1.2.0）=====
+    function setupLocationModule() {
+        // DOM 元素引用
+        const modeSwitchBtn = document.getElementById('locationModeSwitch');
+        const modeText = document.getElementById('locationModeText');
+        const autoPanel = document.getElementById('autoLocationPanel');
+        const manualPanel = document.getElementById('manualLocationPanel');
+        const manualLatInput = document.getElementById('manualLat');
+        const manualLngInput = document.getElementById('manualLng');
+        const setCoordsBtn = document.getElementById('setCoordsBtn');
+        const citySelectSimple = document.getElementById('citySelectSimple');
+        const applyCityBtn = document.getElementById('applyCityBtn');
+        const footerCoords = document.getElementById('footerCoordinates');
+        const footerCity = document.getElementById('footerCityName');
 
-        const citiesData = {
-            "北京市": ["东城", "西城", "朝阳", "海淀", "丰台"],
-            "上海市": ["浦东", "黄浦", "徐汇", "静安", "长宁"],
-            "重庆市": ["渝中", "江北", "南岸", "渝北", "巴南"],
-            "广东省": ["广州", "深圳", "珠海", "佛山", "东莞"],
-            "浙江省": ["杭州", "宁波", "温州", "嘉兴", "湖州"],
-            "江苏省": ["南京", "苏州", "无锡", "常州", "镇江"],
-            "四川省": ["成都", "绵阳", "德阳", "乐山", "宜宾"],
-            "河北省": ["石家庄", "唐山", "秦皇岛", "保定", "张家口"],
-            "湖南省": ["长沙", "株洲", "湘潭", "衡阳", "岳阳"],
-            "湖北省": ["武汉", "黄石", "宜昌", "襄阳", "荆州"],
-            "河南省": ["郑州", "开封", "洛阳", "新乡", "焦作"],
-            "山东省": ["济南", "青岛", "淄博", "烟台", "潍坊"],
-            "陕西省": ["西安", "咸阳", "宝鸡", "渭南", "铜川"],
-            "福建省": ["福州", "厦门", "泉州", "漳州", "莆田"],
-            "台湾省": ["台北", "新北", "台中", "台南", "高雄"],
-            "辽宁省": ["沈阳", "大连", "鞍山", "抚顺", "本溪"],
-            "黑龙江省": ["哈尔滨", "大庆", "齐齐哈尔", "牡丹江", "佳木斯"],
-            "吉林省": ["长春", "吉林", "四平", "辽源", "通化"],
-            "安徽省": ["合肥", "芜湖", "马鞍山", "蚌埠", "淮南"],
-            "江西省": ["南昌", "九江", "景德镇", "赣州", "宜春"],
-            "山西省": ["太原", "大同", "阳泉", "长治", "晋城"],
-            "甘肃省": ["兰州", "天水", "武威", "张掖", "平凉"],
-            "青海省": ["西宁", "海东", "海北", "海南", "黄南"],
-            "新疆维吾尔自治区": ["乌鲁木齐", "克拉玛依", "吐鲁番", "哈密", "阿克苏"],
-            "内蒙古自治区": ["呼和浩特", "包头", "赤峰", "呼伦贝尔", "通辽"],
-            "广西壮族自治区": ["南宁", "柳州", "桂林", "北海", "防城港"],
-            "海南省": ["海口", "三亚", "三沙", "儋州"],
-            "云南省": ["昆明", "大理", "丽江", "曲靖", "玉溪"],
-            "贵州省": ["贵阳", "遵义", "六盘水", "安顺", "毕节"],
-            "西藏自治区": ["拉萨", "日喀则", "昌都", "林芝", "山南"],
-            "宁夏回族自治区": ["银川", "石嘴山", "吴忠", "固原", "中卫"],
-            "香港特别行政区": ["香港岛", "九龙", "新界东", "新界西"],
-            "澳门特别行政区": ["澳门半岛", "氹仔", "路环"]
-        };
+        if (!modeSwitchBtn || !autoPanel || !manualPanel) {
+            console.warn('位置模块部分元素未找到，可能已移除或修改');
+            return;
+        }
 
-        provinceSelect.addEventListener('change', () => {
-            const prov = provinceSelect.value;
-            if (prov) {
-                citySelect.innerHTML = '<option value="">请选择城市</option>';
-                (citiesData[prov] || ["市区"]).forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c;
-                    opt.textContent = c;
-                    citySelect.appendChild(opt);
-                });
-                citySelect.disabled = false;
-                AppState.province = prov;
+        // 模式切换逻辑
+        modeSwitchBtn.addEventListener('click', () => {
+            if (AppState.locationMode === 'auto') {
+                // 切换到手动模式
+                AppState.locationMode = 'manual';
+                modeText.textContent = '手动定位';
+                modeSwitchBtn.classList.add('manual-mode');
+                autoPanel.style.display = 'none';
+                manualPanel.style.display = 'block';
+                showToast('已切换至手动定位模式');
             } else {
-                citySelect.innerHTML = '<option value="">请先选择省份</option>';
-                citySelect.disabled = true;
+                // 切换到自动模式
+                AppState.locationMode = 'auto';
+                modeText.textContent = '自动定位';
+                modeSwitchBtn.classList.remove('manual-mode');
+                manualPanel.style.display = 'none';
+                autoPanel.style.display = 'block';
+                showToast('已切换至自动定位模式');
+                // 重新触发 GPS 定位
+                triggerGPSLocation();
             }
         });
 
-        citySelect.addEventListener('change', () => {
-            AppState.city = citySelect.value;
-        });
+        // 手动设置坐标按钮
+        if (setCoordsBtn) {
+            setCoordsBtn.addEventListener('click', () => {
+                const lat = parseFloat(manualLatInput?.value);
+                const lng = parseFloat(manualLngInput?.value);
+
+                if (isNaN(lat) || isNaN(lng)) {
+                    showToast('请输入有效的经纬度');
+                    return;
+                }
+
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    showToast('纬度范围：-90~90, 经度范围：-180~180');
+                    return;
+                }
+
+                // 更新状态
+                AppState.latitude = lat;
+                AppState.longitude = lng;
+
+                // 更新 UI 显示
+                updateLocationDisplay(lat, lng, '手动输入坐标');
+                updateFooterInfo(lat, lng, '手动输入坐标');
+
+                // 尝试反向地理编码获取城市名
+                reverseGeocode(lat, lng).then(cityName => {
+                    if (cityName) {
+                        AppState.cityName = cityName;
+                        document.getElementById('footerCityName').textContent = cityName;
+                    }
+                }).catch(() => {});
+
+                showToast('坐标已设置');
+            });
+        }
+
+        // 应用城市选择
+        if (applyCityBtn && citySelectSimple) {
+            applyCityBtn.addEventListener('click', () => {
+                const selectedValue = citySelectSimple.value;
+                
+                if (!selectedValue) {
+                    showToast('请先选择一个城市');
+                    return;
+                }
+
+                // 解析经纬度
+                const [lng, lat] = selectedValue.split(',').map(parseFloat);
+                
+                if (isNaN(lat) || isNaN(lng)) {
+                    showToast('城市数据异常');
+                    return;
+                }
+
+                // 更新状态
+                AppState.latitude = lat;
+                AppState.longitude = lng;
+
+                // 获取城市名称（从 select 的 text）
+                const cityName = citySelectSimple.options[citySelectSimple.selectedIndex].text;
+                AppState.cityName = cityName;
+
+                // 更新 UI 显示
+                updateLocationDisplay(lat, lng, cityName);
+                updateFooterInfo(lat, lng, cityName);
+
+                showToast(`已设置为${cityName}`);
+            });
+        }
+    }
+
+    // 触发 GPS 定位
+    function triggerGPSLocation() {
+        if (!navigator.geolocation) {
+            showToast('此浏览器不支持地理定位');
+            return;
+        }
+
+        const gpsIndicator = document.getElementById('gpsIndicator');
+        const dot = gpsIndicator?.querySelector('.indicator-dot');
+        const text = gpsIndicator?.querySelector('.indicator-text');
+        
+        if (dot) dot.className = 'indicator-dot loading';
+        if (text) text.textContent = 'GPS: 定位中...';
+
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                
+                AppState.latitude = lat;
+                AppState.longitude = lng;
+                
+                updateLocationDisplay(lat, lng, 'GPS 定位中...');
+                updateFooterInfo(lat, lng, '正在解析地址...');
+                
+                if (dot) dot.className = 'indicator-dot active';
+                if (text) text.textContent = 'GPS: 定位成功';
+
+                // 尝试反向地理编码
+                reverseGeocode(lat, lng).then(cityName => {
+                    if (cityName) {
+                        AppState.cityName = cityName;
+                        document.getElementById('currentAddress').textContent = cityName;
+                        document.getElementById('footerCityName').textContent = cityName;
+                    } else {
+                        document.getElementById('currentAddress').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        document.getElementById('footerCityName').textContent = `坐标:${lat.toFixed(2)},${lng.toFixed(2)}`;
+                    }
+                }).catch(err => {
+                    console.log('反向地理编码失败:', err);
+                    document.getElementById('currentAddress').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    document.getElementById('footerCityName').textContent = `坐标:${lat.toFixed(2)},${lng.toFixed(2)}`;
+                });
+            },
+            err => {
+                console.log('定位失败:', err.message);
+                
+                if (dot) dot.className = 'indicator-dot inactive';
+                if (text) text.textContent = 'GPS: 定位失败';
+                document.getElementById('currentAddress').textContent = '定位失败，请手动设置';
+                document.getElementById('footerCityName').textContent = '未确定';
+                
+                showToast('GPS 定位失败，请手动选择地区', 3000);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    // 反向地理编码（使用 IP 查询 API）
+    async function reverseGeocode(lat, lng) {
+        try {
+            // 使用 ipapi.co API (更准确，支持反向地理编码)
+            const resp = await fetch(`https://ipapi.co/${lat},${lng}/json/`);
+            if (!resp.ok) throw new Error('API 错误');
+            
+            const data = await resp.json();
+            
+            // 构建地址字符串
+            let address = '';
+            if (data.city) address += data.city;
+            if (data.region) address += `, ${data.region}`;
+            if (data.country_code === 'CN') {
+                if (address) address += ', 中国';
+                else address = '中国';
+            } else if (data.country_name) {
+                if (address) address += `, ${data.country_name}`;
+                else address = data.country_name;
+            }
+            
+            return address || null;
+        } catch (e) {
+            console.log('反向地理编码失败:', e);
+            
+            // 降级方案：使用 ip.sb
+            try {
+                const resp = await fetch('https://api.ip.sb/geocoding');
+                const data = await resp.json();
+                const addrText = data.city ? `${data.city}${data.region ? ', ' + data.region : ''}` : null;
+                return addrText || null;
+            } catch (e2) {
+                console.log('降级 API 也失败了');
+                return null;
+            }
+        }
+    }
+
+    // 更新位置显示
+    function updateLocationDisplay(lat, lng, address) {
+        document.getElementById('latitudeValue').textContent = lat.toFixed(6);
+        document.getElementById('longitudeValue').textContent = lng.toFixed(6);
+        document.getElementById('currentAddress').textContent = address;
+        updateFooterInfo(lat, lng, address);
+    }
+
+    // 更新底部信息栏
+    function updateFooterInfo(lat, lng, cityName) {
+        const coordsEl = document.getElementById('footerCoordinates');
+        const cityEl = document.getElementById('footerCityName');
+        
+        if (coordsEl && typeof lat === 'number' && typeof lng === 'number') {
+            coordsEl.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+        
+        if (cityEl) {
+            cityEl.textContent = cityName || '未确定';
+        }
     }
 
     // ===== 分析结果模块 =====
@@ -819,7 +928,7 @@
         checkAndRequestPermissions();
         setupCompassControls();
         setupBalconyConfig();
-        setupProvinceCitySelectors();
+        setupLocationModule();  // 使用新的位置模块函数
         setupAnalysisButton();
     });
 
