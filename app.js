@@ -171,7 +171,7 @@
         }
     }
 
-    // ===== 方向检测模块 =====
+    // ===== 方向检测模块（修复版）=====
     let orientationHandler = null; // 保存事件处理器引用
 
     function setupCompassControls() {
@@ -181,10 +181,10 @@
         
         if (!autoBtn || !manualInput || !manualBtn) return;
 
-        // 自动检测按钮
+        // 自动检测按钮点击
         autoBtn.addEventListener('click', () => toggleAutoDetection(autoBtn));
 
-        // 手动设置确认
+        // 手动设置确认按钮
         manualBtn.addEventListener('click', () => {
             const angle = parseFloat(manualInput.value);
             if (isNaN(angle) || angle < 0 || angle > 360) {
@@ -192,6 +192,15 @@
                 return;
             }
             setManualDirection(angle);
+            // 清空输入框以便下次使用
+            manualInput.value = '';
+        });
+
+        // 支持回车键提交
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                manualBtn.click();
+            }
         });
     }
 
@@ -206,81 +215,164 @@
             document.getElementById('modeDisplay').textContent = '自动检测中...';
             document.getElementById('modeDisplay').style.color = '#34C759';
             
-            // 禁用手动输入
+            // 禁用手动输入框
             document.getElementById('manualAngleInput').disabled = true;
             document.getElementById('manualSetBtn').disabled = true;
+            document.getElementById('manualAngleInput').placeholder = '自动检测中...';
             
             startOrientationListener();
         } else {
             btn.classList.remove('active');
             btn.querySelector('.btn-icon').textContent = '▶️';
             btn.querySelector('.btn-text').textContent = '自动检测';
-            document.getElementById('modeDisplay').textContent = `已停止 (${AppState.currentAzimuth !== null ? AppState.currentAzimuth : '--'}°)`;
+            const lastAngle = AppState.currentAzimuth !== null ? AppState.currentAzimuth : '--';
+            document.getElementById('modeDisplay').textContent = `已停止 (${lastAngle}°)`;
             document.getElementById('modeDisplay').style.color = '#FF9500';
             
             stopOrientationListener();
             
-            // 启用手动输入
+            // 启用手动输入框并重置状态
             document.getElementById('manualAngleInput').disabled = false;
             document.getElementById('manualSetBtn').disabled = false;
+            document.getElementById('manualAngleInput').placeholder = '输入角度 (0-360)';
+            document.getElementById('manualAngleInput').value = '';
         }
     }
 
     function startOrientationListener() {
-        // 创建命名函数以便后续移除
-        orientationHandler = function(event) {
-            let azimuth;
-            
-            // iOS 设备使用 webkitCompassHeading
-            if (event.webkitCompassHeading !== undefined) {
-                azimuth = event.webkitCompassHeading;
-                console.log('[iOS] Compass Heading:', azimuth);
-            }
-            // Android 设备使用 alpha（需要 deviceorientationabsolute 或校准）
-            else if (event.alpha !== undefined) {
-                // 注意：Android 的 alpha 是相对于设备的初始方向，不是绝对北
-                // 在 landscape 模式下需要调整
-                azimuth = 360 - event.alpha;
-                if (azimuth < 0) azimuth += 360;
-                console.log('[Android] Alpha:', event.alpha, '-> Azimuth:', azimuth);
-            }
-            
-            if (azimuth != null && typeof azimuth === 'number' && !isNaN(azimuth)) {
-                azimuth = Math.round(azimuth % 360);
-                AppState.currentAzimuth = azimuth;
-                updateCompassNeedle(azimuth);
-                document.getElementById('currentAngle').textContent = azimuth + '°';
-            }
-        };
+        console.log('🔄 [启动] 开始注册方向传感器监听器...');
         
-        // 注册监听器
-        window.addEventListener('deviceorientationabsolute', orientationHandler, true);
-        window.addEventListener('deviceorientation', orientationHandler, true);
-        console.log('✅ 方向传感器监听已启动');
+        // 检查设备是否支持方向传感器
+        if (typeof DeviceOrientationEvent === 'undefined') {
+            console.warn('⚠️ 此浏览器不支持 DeviceOrientationEvent');
+            showToast('您的浏览器不支持方向传感器');
+            setTimeout(() => {
+                if (AppState.isAutoDetecting) toggleAutoDetection(document.getElementById('autoDetectBtn'));
+            }, 2000);
+            return;
+        }
+
+        // iOS 13+ 需要显式请求权限
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        registerOrientationHandlers();
+                    } else {
+                        console.warn('⚠️ 方向传感器权限被拒绝');
+                        showToast('需要授权才能使用自动检测功能');
+                        if (AppState.isAutoDetecting) {
+                            toggleAutoDetection(document.getElementById('autoDetectBtn'));
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ 权限请求错误:', err);
+                    showToast('权限请求失败');
+                    if (AppState.isAutoDetecting) {
+                        toggleAutoDetection(document.getElementById('autoDetectBtn'));
+                    }
+                });
+        } else {
+            // 非 iOS 设备或旧版本 iOS
+            registerOrientationHandlers();
+        }
+
+        function registerOrientationHandlers() {
+            // 主处理函数 - 每次有方向变化时调用
+            orientationHandler = function(event) {
+                let azimuth = null;
+                
+                // ===== iOS Safari: webkitCompassHeading (最可靠) =====
+                if (event.webkitCompassHeading !== undefined) {
+                    azimuth = event.webkitCompassHeading;
+                    console.debug(`[iOS Compass] ${azimuth.toFixed(1)}°`);
+                }
+                // ===== Chrome on Android: alpha (相对值，但最常用) =====
+                else if (event.alpha !== undefined) {
+                    // ⚠️ 注意：alpha 是相对于页面加载时的初始姿态
+                    // 对于绝对北向，需要使用 deviceorientationabsolute
+                    const alpha = event.alpha;
+                    
+                    // 计算方位角：将 alpha 转换为顺时针旋转的角度
+                    // CSS rotate 是顺时针，所以我们需要反转符号
+                    azimuth = (360 - alpha) % 360;
+                    
+                    if (debugEnabled) {
+                        console.log(`[Android Alpha] alpha=${alpha.toFixed(1)}° → azimuth=${azimuth.toFixed(1)}°`);
+                    }
+                }
+                
+                if (azimuth !== null && typeof azimuth === 'number' && !isNaN(azimuth)) {
+                    // 确保在 0-360 范围内
+                    azimuth = Math.round(((azimuth % 360) + 360) % 360);
+                    
+                    // 更新状态和 UI
+                    AppState.currentAzimuth = azimuth;
+                    updateCompassNeedle(azimuth);
+                    document.getElementById('currentAngle').textContent = `${azimuth}°`;
+                }
+            };
+
+            // 添加各种可能的监听器
+            try {
+                // deviceorientationabsolute - 提供绝对坐标参考（部分设备支持）
+                window.addEventListener('deviceorientationabsolute', orientationHandler, true);
+                console.log('✅ 已注册 deviceorientationabsolute 监听器');
+            } catch (e) {
+                console.log('ℹ️ deviceorientationabsolute 不可用');
+            }
+
+            try {
+                // 标准的 deviceorientation 事件（最广泛支持）
+                window.addEventListener('deviceorientation', orientationHandler, { passive: true });
+                console.log('✅ 已注册 deviceorientation 监听器');
+            } catch (e) {
+                console.error('❌ 无法注册 deviceorientation:', e.message);
+                throw e; // 抛出异常让上层知道失败了
+            }
+
+            console.log('📡 方向传感器监听已就绪，请移动设备测试');
+            
+            // iOS 特定提示
+            if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                console.log('💡 检测到 iOS 设备，建议使用横屏获得更好的精度');
+            }
+        }
     }
 
     function stopOrientationListener() {
         if (orientationHandler) {
-            window.removeEventListener('deviceorientationabsolute', orientationHandler, true);
-            window.removeEventListener('deviceorientation', orientationHandler, true);
+            try {
+                window.removeEventListener('deviceorientationabsolute', orientationHandler, true);
+                window.removeEventListener('deviceorientation', orientationHandler, { passive: true });
+                console.log('⏹️ 方向传感器监听已移除');
+            } catch (e) {
+                console.warn('⚠️ 移除监听器出错:', e.message);
+            }
             orientationHandler = null;
-            console.log('⏹️ 方向传感器监听已停止');
         }
     }
 
     function setManualDirection(angle) {
-        AppState.currentAzimuth = angle;
-        updateCompassNeedle(angle);
-        document.getElementById('currentAngle').textContent = angle + '°';
-        document.getElementById('modeDisplay').textContent = `手动设置：${angle}°`;
+        const validAngle = Math.round(parseFloat(angle));
+        if (isNaN(validAngle) || validAngle < 0 || validAngle > 360) {
+            showToast('无效的角度值');
+            return;
+        }
+        
+        AppState.currentAzimuth = validAngle;
+        updateCompassNeedle(validAngle);
+        document.getElementById('currentAngle').textContent = `${validAngle}°`;
+        document.getElementById('modeDisplay').textContent = `手动设置：${validAngle}°`;
         document.getElementById('modeDisplay').style.color = '#007AFF';
-        showToast(`朝向已设置为 ${angle}°`);
+        showToast(`朝向已设置为 ${validAngle}°`);
     }
 
     function updateCompassNeedle(azimuth) {
         const needle = document.getElementById('compassNeedle');
         if (needle && azimuth !== null && azimuth !== undefined) {
-            // transform 的顺序很重要：先居中再旋转
+            // transform 顺序：先 translate(-50%, -50%) 居中，再 rotate 旋转
             needle.style.transform = `translate(-50%, -50%) rotate(${azimuth}deg)`;
         }
     }
