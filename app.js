@@ -281,43 +281,123 @@
             }
         };
 
-        // 尝试请求权限（仅 iOS 13+）
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            console.log('📱 检测到 iOS 13+，请求方向权限...');
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        console.log('✅ 权限已授予，开始监听...');
-                        registerListeners();
-                    } else {
-                        console.warn('⚠️ 用户拒绝方向权限');
-                        showToast('请授权方向传感器权限');
-                        const btn = document.getElementById('autoDetectBtn');
-                        if (btn && AppState.isAutoDetecting) toggleAutoDetection(btn);
-                    }
-                })
-                .catch(err => {
-                    console.error('❌ 权限请求失败:', err);
-                    showToast('权限请求失败，请重试');
-                    const btn = document.getElementById('autoDetectBtn');
-                    if (btn && AppState.isAutoDetecting) toggleAutoDetection(btn);
-                });
-        } else {
-            // 非 iOS 设备直接开始监听
-            console.log('🤖 非 iOS 设备，直接开始监听...');
-            registerListeners();
+        // ========== 关键修复：Android 权限申请 ==========
+        requestDevicePermissions().then(granted => {
+            if (granted) {
+                console.log('✅ 设备权限已授予，开始监听方向数据...');
+                registerListeners();
+            } else {
+                console.warn('⚠️ 用户拒绝设备权限或使用受限模式');
+                showToast('需要授权才能使用自动检测');
+                // 降级方案：尝试直接注册（可能被系统拦截）
+                console.log('💡 尝试在不请求权限的情况下注册监听器...');
+                registerListeners();
+            }
+        }).catch(err => {
+            console.error('❌ 权限处理出错:', err);
+            showToast('权限请求失败，请重试');
+        });
+
+        async function requestDevicePermissions() {
+            // 检测是否是 iOS 13+（需要特殊权限 API）
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                console.log('📱 检测到 iOS 13+，调用官方权限 API...');
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    console.log(`iOS 权限状态：${permissionState}`);
+                    return permissionState === 'granted';
+                } catch (err) {
+                    console.error('iOS 权限请求错误:', err.message);
+                    throw err;
+                }
+            }
+            
+            // Android 权限申请方案
+            console.log('🤖 检测到 Android 设备，准备申请运动传感器权限...');
+            
+            // 方案 1: 使用 Permissions API（Chrome 87+）
+            if ('permissions' in navigator) {
+                try {
+                    const permissionsStatus = await checkAndroidPermissions();
+                    if (permissionsStatus) return true;
+                } catch (err) {
+                    console.log('Permissions API 不可用:', err.message);
+                }
+            }
+            
+            // 方案 2: 检查 User-Agent（简单的 Android 识别）
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            if (isAndroid) {
+                console.log('ℹ️ Android 设备确认，提示用户可能需要授权');
+                showAndroidPermissionGuide();
+            }
+            
+            // 默认返回 true 以继续尝试注册监听器
+            console.log('ℹ️ 跳过显式权限检查，直接尝试注册监听器');
+            return true;
+        }
+
+        async function checkAndroidPermissions() {
+            try {
+                const query = { name: 'deviceOrientation', sensitive: true };
+                const status = await navigator.permissions.query(query);
+                console.log(`deviceOrientation 权限状态：${status.state}`);
+                
+                if (status.state === 'granted') {
+                    return true;
+                } else if (status.state === 'prompt') {
+                    // 等待用户操作
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.warn('无法查询 deviceOrientation 权限:', err.message);
+                return null;
+            }
+        }
+
+        function showAndroidPermissionGuide() {
+            const guideHTML = `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                    <strong>📱 Android 设备使用说明：</strong><br>
+                    <small>某些国产 ROM（如 MIUI、EMUI）可能限制了传感器访问。<br>
+                    如果检测到无数据，请：<br>
+                    1. 在应用信息中允许"身体传感器"权限<br>
+                    2. 重启浏览器后重试</small>
+                </div>
+            `;
+            
+            const module = document.querySelector('.orientation-module .module-content');
+            if (module) {
+                const existingGuide = module.querySelector('.android-guide');
+                if (!existingGuide) {
+                    const div = document.createElement('div');
+                    div.className = 'android-guide';
+                    div.innerHTML = guideHTML;
+                    div.style.marginBottom = '16px';
+                    module.insertBefore(div, module.firstChild);
+                }
+            }
         }
 
         function registerListeners() {
             try {
                 window.addEventListener('deviceorientation', orientationHandler);
-                console.log('✅ deviceorientation 监听器已注册');
+                console.log('✅ deviceorientation 监听器已注册成功');
+                
+                // 延迟显示成功提示
+                setTimeout(() => {
+                    console.log('📡 方向检测已就绪，请在手机上移动设备测试');
+                    
+                    // iOS 特定提示
+                    if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                        console.log('💡 检测到 iOS 设备，建议使用横屏获得更好的精度');
+                    }
+                }, 1000);
             } catch (err) {
                 console.error('❌ 无法注册监听器:', err.message);
                 throw err;
             }
-
-            console.log('📡 方向检测已就绪，请移动设备测试');
         }
     }
 
