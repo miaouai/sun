@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>指南针测试</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .compass {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 4px solid #FF9500;
+            position: relative;
+            background: radial-gradient(circle at center, #fff 0%, #f0f0f0 100%);
+            margin: 20px;
+        }
+        .directions span {
+            position: absolute;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .N { top: 10px; left: 50%; transform: translateX(-50%); color: red; }
+        .E { right: 10px; top: 50%; transform: translateY(-50%); }
+        .S { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .W { left: 10px; top: 50%; transform: translateY(-50%); }
+        
+        .needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+        }
+        
+        /* 北向指针 - 红色向上 */
+        .needle::before {
+            content: '';
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 85px solid red;
+        }
+        
+        /* 南向指针 - 灰色向下 */
+        .needle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 85px solid gray;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        input[type="number"] {
+            padding: 8px;
+            width: 100px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .status {
+            margin: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            min-width: 200px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧭 指南针对齐测试</h1>
+    
+    <div class="compass">
+        <div class="directions">
+            <span class="N">北 (0°)</span>
+            <span class="E">东 (90°)</span>
+            <span class="S">南 (180°)</span>
+            <span class="W">西 (270°)</span>
+        </div>
+        <div class="needle" id="needle"></div>
+    </div>
+    
+    <div class="status">
+        <p><strong>当前角度:</strong> <span id="angleDisplay">0°</span></p>
+        <p style="color: #666; font-size: 14px; margin-top: 8px;">
+            红色指针应该指向北方 (顶部)<br>
+            灰色指针应该指向南方 (底部)
+        </p>
+    </div>
+    
+    <div>
+        <input type="number" id="manualInput" placeholder="角度 (0-360)" min="0" max="360">
+        <button onclick="setAngle()">设置角度</button>
+        <button onclick="rotateTo(0)">0° 北</button>
+        <button onclick="rotateTo(90)">90° 东</button>
+        <button onclick="rotateTo(180)">180° 南</button>
+        <button onclick="rotateTo(270)">270° 西</button>
+    </div>
+    
+    <script>
+        function setAngle() {
+            const input = document.getElementById('manualInput');
+            let angle = parseFloat(input.value);
+            if (isNaN(angle)) angle = 0;
+            angle = angle % 360;
+            if (angle < 0) angle += 360;
+            rotateTo(angle);
+        }
+        
+        function rotateTo(angle) {
+            const needle = document.getElementById('needle');
+            // 关键：先居中再旋转
+            needle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+            document.getElementById('angleDisplay').textContent = `${Math.round(angle)}°`;
+            
+            // 自动检测模拟
+            if ('deviceOrientation' in window || 'DeviceOrientationEvent' in window) {
+                console.log('设备支持方向传感器');
+                startAutoDetect();
+            }
+        }
+        
+        let orientationHandler = null;
+        
+        function startAutoDetect() {
+            if (orientationHandler) return;
+            
+            orientationHandler = function(event) {
+                let azimuth = null;
+                
+                if (event.webkitCompassHeading !== undefined) {
+                    azimuth = event.webkitCompassHeading;
+                    console.log('[iOS]', azimuth.toFixed(1));
+                } else if (event.alpha !== undefined) {
+                    azimuth = (360 - event.alpha) % 360;
+                    if (azimuth < 0) azimuth += 360;
+                    console.log('[Android]', azimuth.toFixed(1));
+                }
+                
+                if (azimuth !== null && !isNaN(azimuth)) {
+                    const rounded = Math.round(azimuth);
+                    rotateTo(rounded);
+                }
+            };
+            
+            window.addEventListener('deviceorientation', orientationHandler);
+            console.log('✅ 自动检测已启动');
+        }
+        
+        // 初始化
+        rotateTo(0);
+    </script>
+</body>
+</html>
