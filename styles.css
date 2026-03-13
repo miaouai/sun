@@ -152,8 +152,8 @@ body {
 
 .compass {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 240px;
+    height: 240px;
     border-radius: 50%;
     background: radial-gradient(circle at center, #fff 0%, #f0f0f0 100%);
     box-shadow: 
@@ -217,7 +217,7 @@ body {
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 85px solid var(--error-color); /* 红色指北 - 向上 */
+    border-bottom: 60px solid var(--error-color); /* 红色指北 - 向上 (缩短) */
 }
 
 /* 南向指针（灰色）- 向下延伸 */
@@ -231,7 +231,7 @@ body {
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 85px solid var(--text-secondary); /* 灰色指南 - 向下 */
+    border-top: 60px solid var(--text-secondary); /* 灰色指南 - 向下 (缩短) */
 }
 
 .compass-current-angle {
