@@ -114,15 +114,26 @@
 
                 <!-- 封闭式选项（所有阳台都需要） -->
                 <div class="config-section">
-                    <h3 class="config-title">是否封闭式</h3>
+                    <h3 class="config-title">封闭程度</h3>
                     <div class="binary-selector">
                         <label class="radio-card binary-option">
                             <input type="radio" name="enclosedType" value="open" checked>
                             <div class="card-content">
                                 <span class="card-icon">☀️</span>
                                 <div class="card-info">
-                                    <strong>开放式阳台</strong>
-                                    <p>无玻璃遮挡，采光最佳</p>
+                                    <strong>完全开放</strong>
+                                    <p>无任何遮挡，采光最佳</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card binary-option">
+                            <input type="radio" name="enclosedType" value="semi-closed">
+                            <div class="card-content">
+                                <span class="card-icon">🌤️</span>
+                                <div class="card-info">
+                                    <strong>半封闭</strong>
+                                    <p>部分玻璃或栏杆，透光率约 -8%</p>
                                 </div>
                             </div>
                         </label>
@@ -132,8 +143,8 @@
                             <div class="card-content">
                                 <span class="card-icon">🪟</span>
                                 <div class="card-info">
-                                    <strong>封闭式阳台</strong>
-                                    <p>有玻璃窗，透光率约 -15%</p>
+                                    <strong>全封闭</strong>
+                                    <p>完整玻璃窗，透光率约 -15%</p>
                                 </div>
                             </div>
                         </label>
@@ -143,16 +154,16 @@
                 <!-- 遮挡选项（仅凸出式阳台显示） -->
                 <div class="config-section obstruction-section" id="obstructionSection" style="display: none;">
                     <h3 class="config-title">周边遮挡情况</h3>
-                    <p class="config-hint">请选择是否有建筑物遮挡视线（可多选，不选表示无遮挡）</p>
+                    <p class="config-hint">以下方向是否有建筑或墙面遮挡阳光？（可多选）</p>
                     
                     <div class="obstruction-grid">
                         <label class="checkbox-card">
                             <input type="checkbox" name="obstruction" value="left">
                             <div class="card-content">
-                                <span class="card-icon">🏢←</span>
+                                <span class="card-icon">⬅️</span>
                                 <div class="card-info">
-                                    <strong>左侧有楼</strong>
-                                    <p>左边有建筑物阻挡阳光</p>
+                                    <strong>左侧是否遮挡？</strong>
+                                    <p>左边有建筑或墙面挡光</p>
                                 </div>
                             </div>
                         </label>
@@ -160,10 +171,10 @@
                         <label class="checkbox-card">
                             <input type="checkbox" name="obstruction" value="right">
                             <div class="card-content">
-                                <span class="card-icon">→🏢</span>
+                                <span class="card-icon">➡️</span>
                                 <div class="card-info">
-                                    <strong>右侧有楼</strong>
-                                    <p>右边有建筑物阻挡阳光</p>
+                                    <strong>右侧是否遮挡？</strong>
+                                    <p>右边有建筑或墙面挡光</p>
                                 </div>
                             </div>
                         </label>
@@ -171,10 +182,10 @@
                         <label class="checkbox-card">
                             <input type="checkbox" name="obstruction" value="top">
                             <div class="card-content">
-                                <span class="card-icon">⬆️🏢</span>
+                                <span class="card-icon">⬆️</span>
                                 <div class="card-info">
-                                    <strong>上方有楼</strong>
-                                    <p>前方楼栋遮挡高角度阳光</p>
+                                    <strong>前方是否遮挡？</strong>
+                                    <p>前方有楼栋遮挡高角度阳光</p>
                                 </div>
                             </div>
                         </label>

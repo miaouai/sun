@@ -9,7 +9,7 @@
         currentAzimuth: null,        // 当前朝向角度 (0-360)
         isAutoDetecting: false,      // 是否正在自动检测
         balconyType: 'protruding',   // 阳台类型：protruding|recessed
-        enclosedType: 'open',         // 封闭类型：open|closed
+        enclosedType: 'open',         // 封闭类型：open|semi-closed|closed
         obstructions: [],            // 遮挡列表：['left', 'right', 'top']
         latitude: null,              // 纬度
         longitude: null,             // 经度
@@ -736,8 +736,14 @@
         // 2. 阳台类型系数
         let typeFactor = AppState.balconyType === 'protruding' ? 1.35 : 1.0;
         
-        // 3. 封闭性系数（封闭式有玻璃损失）
-        let enclosedFactor = AppState.enclosedType === 'open' ? 1.0 : 0.85;
+        // 3. 封闭性系数（开放式最优，全封闭最差）
+        let enclosedFactor = 1.0;
+        switch(AppState.enclosedType) {
+            case 'open': enclosedFactor = 1.0; break;          // 完全开放
+            case 'semi-closed': enclosedFactor = 0.92; break;  // 半封闭 -8%
+            case 'closed': enclosedFactor = 0.85; break;       // 全封闭 -15%
+            default: enclosedFactor = 1.0;
+        }
         
         // 4. 遮挡系数（仅凸出式适用）
         let obstructionFactor = 1.0;
