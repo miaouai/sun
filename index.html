@@ -210,10 +210,16 @@
             <div class="module-header">
                 <span class="module-icon">📍</span>
                 <h2>位置信息</h2>
+                <!-- 模式切换开关 -->
+                <button class="mode-switch-btn" id="locationModeSwitch" title="切换自动/手动模式">
+                    <span class="switch-icon">🔄</span>
+                    <span class="switch-text" id="locationModeText">自动定位</span>
+                </button>
             </div>
             
             <div class="module-content">
-                <div class="location-auto-mode">
+                <!-- 自动定位模式 -->
+                <div class="location-auto-mode" id="autoLocationPanel">
                     <div class="location-status-bar">
                         <span class="location-indicator" id="gpsIndicator">
                             <span class="indicator-dot inactive"></span>
@@ -238,50 +244,167 @@
                     </div>
                 </div>
 
-                <div class="location-manual-mode">
-                    <h3>手动选择地区</h3>
-                    <div class="province-city-selectors">
-                        <select id="provinceSelect">
-                            <option value="">请选择省份</option>
-                            <option value="北京市">北京市</option>
-                            <option value="天津市">天津市</option>
-                            <option value="上海市">上海市</option>
-                            <option value="重庆市">重庆市</option>
-                            <option value="河北省">河北省</option>
-                            <option value="山西省">山西省</option>
-                            <option value="辽宁省">辽宁省</option>
-                            <option value="吉林省">吉林省</option>
-                            <option value="黑龙江省">黑龙江省</option>
-                            <option value="江苏省">江苏省</option>
-                            <option value="浙江省">浙江省</option>
-                            <option value="安徽省">安徽省</option>
-                            <option value="福建省">福建省</option>
-                            <option value="江西省">江西省</option>
-                            <option value="山东省">山东省</option>
-                            <option value="河南省">河南省</option>
-                            <option value="湖北省">湖北省</option>
-                            <option value="湖南省">湖南省</option>
-                            <option value="广东省">广东省</option>
-                            <option value="海南省">海南省</option>
-                            <option value="四川省">四川省</option>
-                            <option value="贵州省">贵州省</option>
-                            <option value="云南省">云南省</option>
-                            <option value="陕西省">陕西省</option>
-                            <option value="甘肃省">甘肃省</option>
-                            <option value="青海省">青海省</option>
-                            <option value="台湾省">台湾省</option>
-                            <option value="内蒙古自治区">内蒙古自治区</option>
-                            <option value="广西壮族自治区">广西壮族自治区</option>
-                            <option value="西藏自治区">西藏自治区</option>
-                            <option value="宁夏回族自治区">宁夏回族自治区</option>
-                            <option value="新疆维吾尔自治区">新疆维吾尔自治区</option>
-                            <option value="香港特别行政区">香港特别行政区</option>
-                            <option value="澳门特别行政区">澳门特别行政区</option>
-                        </select>
-                        
-                        <select id="citySelect" disabled>
-                            <option value="">请先选择省份</option>
-                        </select>
+                <!-- 手动定位模式 -->
+                <div class="location-manual-mode" id="manualLocationPanel" style="display: none;">
+                    <div class="manual-input-section">
+                        <h3>方式一：输入坐标</h3>
+                        <div class="coordinate-inputs">
+                            <div class="input-group">
+                                <label for="manualLat">纬度</label>
+                                <input type="number" id="manualLat" step="0.000001" placeholder="-90 到 90" min="-90" max="90">
+                            </div>
+                            <div class="input-group">
+                                <label for="manualLng">经度</label>
+                                <input type="number" id="manualLng" step="0.000001" placeholder="-180 到 180" min="-180" max="180">
+                            </div>
+                        </div>
+                        <button class="btn btn-coords" id="setCoordsBtn">🎯 设置坐标</button>
+                    </div>
+                    
+                    <div class="manual-input-section">
+                        <h3>方式二：选择城市</h3>
+                        <div class="city-select-wrapper">
+                            <select id="citySelectSimple">
+                                <option value="">请选择城市</option>
+                                <!-- 主要城市列表 -->
+                                <optgroup label="直辖市">
+                                    <option value="116.407529,39.904030">北京</option>
+                                    <option value="121.473701,31.230416">上海</option>
+                                    <option value="106.551556,29.563000">重庆</option>
+                                    <option value="117.200983,39.131426">天津</option>
+                                </optgroup>
+                                <optgroup label="省会/首府">
+                                    <option value="113.264434,23.129162">广州</option>
+                                    <option value="113.924301,22.543000">深圳</option>
+                                    <option value="121.466534,31.286281">南京</option>
+                                    <option value="121.610838,31.295572">苏州</option>
+                                    <option value="120.154566,30.274055">杭州</option>
+                                    <option value="121.545077,31.210209">无锡</option>
+                                    <option value="121.120242,30.653777">常州</option>
+                                    <option value="118.796874,32.060255">镇江</option>
+                                    <option value="113.281000,23.125333">东莞</option>
+                                    <option value="113.124167,23.017500">佛山</option>
+                                    <option value="113.568889,22.377222">珠海</option>
+                                    <option value="121.565353,31.203564">南通</option>
+                                    <option value="120.579167,31.820833">扬州</option>
+                                    <option value="120.869722,31.695833">泰州</option>
+                                    <option value="120.032778,30.509722">嘉兴</option>
+                                    <option value="119.311111,30.428889">湖州</option>
+                                    <option value="120.873333,30.900556">绍兴</option>
+                                    <option value="121.545556,28.151111">宁波</option>
+                                    <option value="120.709722,27.883611">温州</option>
+                                    <option value="114.528889,34.210000">郑州</option>
+                                    <option value="113.482222,23.017222">惠州</option>
+                                    <option value="108.948333,34.749722">西安</option>
+                                    <option value="112.535556,37.871944">石家庄</option>
+                                    <option value="114.328889,30.658333">武汉</option>
+                                    <option value="104.066944,30.665833">成都</option>
+                                    <option value="104.056389,30.666944">绵阳</option>
+                                    <option value="104.362778,31.164444">德阳</option>
+                                    <option value="103.441111,29.415278">乐山</option>
+                                    <option value="104.629722,28.623611">宜宾</option>
+                                    <option value="112.917500,28.218889">长沙</option>
+                                    <option value="112.935833,27.828056">株洲</option>
+                                    <option value="112.902500,27.832222">湘潭</option>
+                                    <option value="112.588333,26.904722">衡阳</option>
+                                    <option value="113.115833,29.385000">岳阳</option>
+                                    <option value="114.305833,30.591111">荆州</option>
+                                    <option value="112.194444,30.565278">襄阳</option>
+                                    <option value="112.264722,30.453056">黄石</option>
+                                    <option value="111.318611,30.706944">宜昌</option>
+                                    <option value="113.625833,34.766667">济南</option>
+                                    <option value="120.382778,36.067222">青岛</option>
+                                    <option value="118.072222,36.808611">淄博</option>
+                                    <option value="121.447222,37.467778">烟台</option>
+                                    <option value="119.107222,36.706944">潍坊</option>
+                                    <option value="117.164722,36.669444">洛阳</option>
+                                    <option value="114.326944,35.302778">开封</option>
+                                    <option value="113.924722,35.301111">新乡</option>
+                                    <option value="112.690556,35.246667">焦作</option>
+                                    <option value="120.145833,35.478611">合肥</option>
+                                    <option value="118.373056,31.344167">芜湖</option>
+                                    <option value="118.505833,31.674167">马鞍山</option>
+                                    <option value="117.365833,32.940556">蚌埠</option>
+                                    <option value="116.996111,32.634167">淮南</option>
+                                    <option value="115.864444,28.684722">南昌</option>
+                                    <option value="115.979722,29.711389">九江</option>
+                                    <option value="117.184722,29.289722">景德镇</option>
+                                    <option value="114.968056,25.855833">赣州</option>
+                                    <option value="114.388611,27.804167">宜春</option>
+                                    <option value="112.548056,37.869444">太原</option>
+                                    <option value="113.083889,40.079167">大同</option>
+                                    <option value="113.580278,37.859167">阳泉</option>
+                                    <option value="113.080278,36.177500">长治</option>
+                                    <option value="112.849444,35.497500">晋城</option>
+                                    <option value="103.834444,36.057778">兰州</option>
+                                    <option value="105.700556,34.577222">天水</option>
+                                    <option value="102.630278,37.930833">武威</option>
+                                    <option value="100.453889,38.931667">张掖</option>
+                                    <option value="106.648056,34.562778">平凉</option>
+                                    <option value="101.778056,36.610278">西宁</option>
+                                    <option value="102.134722,36.495556">海东</option>
+                                    <option value="87.616667,43.825556">乌鲁木齐</option>
+                                    <option value="84.867778,45.585278">克拉玛依</option>
+                                    <option value="89.134444,42.924167">吐鲁番</option>
+                                    <option value="93.442222,42.817500">哈密</option>
+                                    <option value="80.267222,41.118889">阿克苏</option>
+                                    <option value="111.665278,40.815278">呼和浩特</option>
+                                    <option value="110.004167,40.657222">包头</option>
+                                    <option value="118.905556,42.268889">赤峰</option>
+                                    <option value="119.754722,49.207778">呼伦贝尔</option>
+                                    <option value="122.254167,43.599722">通辽</option>
+                                    <option value="108.336667,22.815833">南宁</option>
+                                    <option value="109.400833,24.318333">柳州</option>
+                                    <option value="110.290833,25.278056">桂林</option>
+                                    <option value="109.118056,21.476667">北海</option>
+                                    <option value="108.335556,21.613889">防城港</option>
+                                    <option value="110.345833,20.043889">海口</option>
+                                    <option value="109.509444,18.247500">三亚</option>
+                                    <option value="109.860000,16.730278">三沙</option>
+                                    <option value="109.546667,19.547778">儋州</option>
+                                    <option value="102.711944,25.045833">昆明</option>
+                                    <option value="100.259722,25.612500">大理</option>
+                                    <option value="100.256389,26.872778">丽江</option>
+                                    <option value="103.788333,25.489444">曲靖</option>
+                                    <option value="102.555000,24.346111">玉溪</option>
+                                    <option value="106.631667,26.584444">贵阳</option>
+                                    <option value="106.952778,27.707222">遵义</option>
+                                    <option value="104.836111,26.585000">六盘水</option>
+                                    <option value="105.944722,26.257222">安顺</option>
+                                    <option value="105.287500,27.301389">毕节</option>
+                                    <option value="91.113889,29.650833">拉萨</option>
+                                    <option value="88.857222,29.272778">日喀则</option>
+                                    <option value="97.146944,31.165278">昌都</option>
+                                    <option value="94.363889,29.654722">林芝</option>
+                                    <option value="91.770278,29.274167">山南</option>
+                                    <option value="106.196944,38.487500">银川</option>
+                                    <option value="105.914167,39.025278">石嘴山</option>
+                                    <option value="106.187222,37.992778">吴忠</option>
+                                    <option value="106.185833,36.065833">固原</option>
+                                    <option value="105.188611,37.499444">中卫</option>
+                                    <option value="116.396256,22.257768">香港</option>
+                                    <option value="113.544042,22.161112">澳门</option>
+                                    <option value="121.565353,25.033810">台北</option>
+                                    <option value="121.492442,25.104326">新北</option>
+                                    <option value="120.675339,24.147327">台中</option>
+                                    <option value="120.214212,23.003972">台南</option>
+                                    <option value="120.301578,22.630097">高雄</option>
+                                </optgroup>
+                            </select>
+                            <button class="btn btn-apply-city" id="applyCityBtn">使用此城市</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部信息显示区 -->
+                <div class="location-footer-info">
+                    <div class="footer-coordinates">
+                        <span class="coord-label">当前坐标:</span>
+                        <span class="coord-value" id="footerCoordinates">--, --</span>
+                    </div>
+                    <div class="footer-city">
+                        <span class="city-label">所在城市:</span>
+                        <span class="city-value" id="footerCityName">未确定</span>
                     </div>
                 </div>
             </div>
@@ -382,7 +505,7 @@
 
         <!-- 底部信息 -->
         <footer class="footer">
-            <p class="version">v1.0.0</p>
+            <p class="version">v1.2.0</p>
             <a href="https://github.com/miaouai/sun" class="github-link">GitHub</a>
         </footer>
     </div>
