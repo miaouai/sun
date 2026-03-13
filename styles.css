@@ -203,31 +203,34 @@ body {
     left: 50%;
     width: 0;
     height: 0;
+    transform: translate(-50%, -50%); /* 居中定位 */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .compass-needle::before {
     content: '';
     position: absolute;
+    bottom: 0; /* 从中心点向上绘制红色指针 */
+    left: 50%;
+    transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 60px solid var(--error-color);
-    transform: rotate(-45deg);
-    transform-origin: bottom center;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 70px solid var(--error-color); /* 红色指北 */
 }
 
 .compass-needle::after {
     content: '';
     position: absolute;
+    bottom: 0; /* 从中心点向下绘制灰色指针 */
+    left: 50%;
+    transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 60px solid var(--text-secondary);
-    transform: rotate(135deg);
-    transform-origin: bottom center;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 70px solid var(--text-secondary); /* 灰色指南 */
 }
 
 .compass-needle .needle-head {
