@@ -203,42 +203,50 @@ body {
     left: 50%;
     width: 0;
     height: 0;
-    transform: translate(-50%, -50%); /* 居中定位 */
+    /* 初始状态居中，后续通过 JS 添加旋转 */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 北向指针（红色）- 向上延伸 */
 .compass-needle::before {
     content: '';
     position: absolute;
-    bottom: 0; /* 从中心点向上绘制红色指针 */
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
     width: 0;
     height: 0;
+    transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 70px solid var(--error-color); /* 红色指北 */
+    border-bottom: 75px solid var(--error-color); /* 红色指向北方 */
 }
 
+/* 南向指针（灰色）- 向下延伸 */
 .compass-needle::after {
     content: '';
     position: absolute;
-    bottom: 0; /* 从中心点向下绘制灰色指针 */
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
     width: 0;
     height: 0;
+    transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 70px solid var(--text-secondary); /* 灰色指南 */
+    border-top: 75px solid var(--text-secondary); /* 灰色指向南方 */
 }
 
-.compass-needle .needle-head {
+/* 中心装饰点 */
+.compass-needle .needle-center {
     position: absolute;
     top: 50%;
     left: 50%;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
     transform: translate(-50%, -50%);
-    font-size: 20px;
+    z-index: 2;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
 }
 
 .compass-current-angle {
