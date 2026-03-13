@@ -297,10 +297,164 @@ body {
 /* ====================
    阳台配置模块样式
    ==================== */
+/* 配置区块通用样式 */
+.config-section {
+    margin-bottom: 20px;
+}
+
+.config-section:last-child {
+    margin-bottom: 0;
+}
+
+.config-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    padding-left: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.config-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    margin-top: -8px;
+}
+
 .balcony-type-selector {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+/* 封闭式选项样式 */
+.binary-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.binary-option:hover {
+    border-color: var(--success-color);
+    background: #f0fdf4;
+}
+
+.binary-option input[type="radio"]:checked + .card-content::before {
+    background: var(--success-color);
+}
+
+/* 遮挡选项网格布局（仅凸出式显示） */
+.obstruction-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.checkbox-card {
+    cursor: pointer;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.checkbox-card:hover {
+    border-color: var(--primary-light);
+    background: #fffaf0;
+}
+
+.checkbox-card input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.checkbox-card input[type="checkbox"]:checked + .card-content {
+    transform: scale(1.02);
+}
+
+.checkbox-card input[type="checkbox"]:checked + .card-content .card-icon {
+    opacity: 1;
+    filter: grayscale(0);
+}
+
+.checkbox-card .card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    position: relative;
+    transition: transform var(--transition-fast);
+}
+
+.checkbox-card .card-icon {
+    font-size: 28px;
+    opacity: 0.3;
+    filter: grayscale(100%);
+    transition: all var(--transition-fast);
+}
+
+.checkbox-card input[type="checkbox"]:checked ~ .card-content .checkmark {
+    display: block;
+}
+
+.checkmark {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.checkbox-card .card-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.checkbox-card .card-info strong {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.checkbox-card .card-info p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+@media (min-width: 480px) {
+    .obstruction-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 479px) {
+    .obstruction-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .checkbox-card .card-content {
+        flex-direction: row;
+        text-align: left;
+    }
+    
+    .checkbox-card .card-icon {
+        font-size: 32px;
+    }
+    
+    .checkbox-card .card-info {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 .radio-card {
@@ -321,7 +475,7 @@ body {
     opacity: 0;
 }
 
-.radio-card input[type="radio"]:checked + .card-content {
+.radio-card input[type="radio"]:checked ~ .card-content {
     transform: scale(1.02);
 }
 

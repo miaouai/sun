@@ -84,28 +84,101 @@
             </div>
             
             <div class="module-content">
-                <div class="balcony-type-selector">
-                    <label class="radio-card">
-                        <input type="radio" name="balconyType" value="protruding" checked>
-                        <div class="card-content">
-                            <span class="card-icon">⬜</span>
-                            <div class="card-info">
-                                <strong>凸出式阳台</strong>
-                                <p>三面采光，光照利用率更高 (+35%)</p>
+                <!-- 阳台类型选择 -->
+                <div class="config-section">
+                    <h3 class="config-title">阳台类型</h3>
+                    <div class="balcony-type-selector">
+                        <label class="radio-card">
+                            <input type="radio" name="balconyType" value="protruding" checked id="balconyProtruding">
+                            <div class="card-content">
+                                <span class="card-icon">⬜</span>
+                                <div class="card-info">
+                                    <strong>凸出式阳台</strong>
+                                    <p>三面采光，光照利用率更高 (+35%)</p>
+                                </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
+                        
+                        <label class="radio-card">
+                            <input type="radio" name="balconyType" value="recessed" id="balconyRecessed">
+                            <div class="card-content">
+                                <span class="card-icon">┌──</span>
+                                <div class="card-info">
+                                    <strong>内嵌式阳台</strong>
+                                    <p>单面采光，需考虑墙面遮挡影响</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 封闭式选项（所有阳台都需要） -->
+                <div class="config-section">
+                    <h3 class="config-title">是否封闭式</h3>
+                    <div class="binary-selector">
+                        <label class="radio-card binary-option">
+                            <input type="radio" name="enclosedType" value="open" checked>
+                            <div class="card-content">
+                                <span class="card-icon">🌬️</span>
+                                <div class="card-info">
+                                    <strong>开放式阳台</strong>
+                                    <p>无玻璃遮挡，采光最佳</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card binary-option">
+                            <input type="radio" name="enclosedType" value="closed">
+                            <div class="card-content">
+                                <span class="card-icon">〰️</span>
+                                <div class="card-info">
+                                    <strong>封闭式阳台</strong>
+                                    <p>有玻璃遮挡，透光率约 -15%</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 遮挡选项（仅凸出式阳台显示） -->
+                <div class="config-section obstruction-section" id="obstructionSection">
+                    <h3 class="config-title">周边遮挡情况</h3>
+                    <p class="config-hint">请选择是否有建筑物遮挡视线（可多选）</p>
                     
-                    <label class="radio-card">
-                        <input type="radio" name="balconyType" value="recessed">
-                        <div class="card-content">
-                            <span class="card-icon">┌──</span>
-                            <div class="card-info">
-                                <strong>内嵌式阳台</strong>
-                                <p>单面采光，需考虑墙面遮挡影响</p>
+                    <div class="obstruction-grid">
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="obstruction" value="left">
+                            <div class="card-content">
+                                <span class="card-icon">←</span>
+                                <div class="card-info">
+                                    <strong>左侧遮挡</strong>
+                                    <p>左边有建筑物阻挡阳光</p>
+                                </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
+                        
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="obstruction" value="right">
+                            <div class="card-content">
+                                <span class="card-icon">→</span>
+                                <div class="card-info">
+                                    <strong>右侧遮挡</strong>
+                                    <p>右边有建筑物阻挡阳光</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="obstruction" value="top">
+                            <div class="card-content">
+                                <span class="card-icon">↑</span>
+                                <div class="card-info">
+                                    <strong>顶部遮挡</strong>
+                                    <p>上方楼栋遮挡高角度阳光</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="config-tip">
@@ -254,6 +327,14 @@
                                 <tr>
                                     <td>阳台类型</td>
                                     <td id="detailBalconyType">--</td>
+                                </tr>
+                                <tr>
+                                    <td>封闭情况</td>
+                                    <td id="detailEnclosedType">--</td>
+                                </tr>
+                                <tr>
+                                    <td>周边遮挡</td>
+                                    <td id="detailObstructions">无</td>
                                 </tr>
                                 <tr>
                                     <td>所在位置</td>

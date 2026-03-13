@@ -9,6 +9,8 @@
         currentAzimuth: null,        // 当前朝向角度 (0-360)
         isAutoDetecting: false,      // 是否正在自动检测
         balconyType: 'protruding',   // 阳台类型：protruding|recessed
+        enclosedType: 'open',         // 封闭类型：open|closed
+        obstructions: [],            // 遮挡列表：['left', 'right', 'top']
         latitude: null,              // 纬度
         longitude: null,             // 经度
         province: '',                // 省份
@@ -486,20 +488,75 @@
     function updateCompassNeedle(azimuth) {
         const needle = document.getElementById('compassNeedle');
         if (needle && azimuth !== null && azimuth !== undefined) {
+            // 🧭 核心修正：红色指针始终指北！
+            // azimuth 是设备顶部朝向的角度（例如 90°= 朝东）
+            // 要让指针指北，需要反向旋转：pointerAngle = (360 - azimuth) % 360
+            // 例子：设备朝东 (90°) → 北在左边 → 指针应转到 270°
+            const pointerAngle = (360 - azimuth) % 360;
+            
             // transform 顺序：先 translate(-50%, -50%) 居中，再 rotate 旋转
-            needle.style.transform = `translate(-50%, -50%) rotate(${azimuth}deg)`;
+            needle.style.transform = `translate(-50%, -50%) rotate(${pointerAngle}deg)`;
         }
     }
 
-    // ===== 阳台配置模块 =====
+    // ===== 阳台配置模块（增强版）=====
     function setupBalconyConfig() {
-        const radios = document.querySelectorAll('input[name="balconyType"]');
-        radios.forEach(radio => {
+        // 阳台类型切换
+        const balconyRadios = document.querySelectorAll('input[name="balconyType"]');
+        balconyRadios.forEach(radio => {
             radio.addEventListener('change', e => {
                 AppState.balconyType = e.target.value;
-                showToast(`已选择：${e.target.closest('label').querySelector('strong').textContent}`);
+                const typeName = e.target.closest('label').querySelector('strong').textContent;
+                
+                // 控制遮挡选项的显示/隐藏
+                const obstructionSection = document.getElementById('obstructionSection');
+                if (e.target.value === 'protruding') {
+                    obstructionSection.style.display = 'block';
+                    showToast(`已选择：${typeName}`);
+                } else {
+                    obstructionSection.style.display = 'none';
+                    AppState.obstructions = []; // 清空遮挡
+                    document.querySelectorAll('input[name="obstruction"]').forEach(cb => cb.checked = false);
+                    showToast(`已选择：${typeName}（内嵌式无需考虑周边遮挡）`);
+                }
             });
         });
+
+        // 封闭式选项切换
+        const enclosedRadios = document.querySelectorAll('input[name="enclosedType"]');
+        enclosedRadios.forEach(radio => {
+            radio.addEventListener('change', e => {
+                AppState.enclosedType = e.target.value;
+                const typeName = e.target.closest('label').querySelector('strong').textContent;
+                showToast(`已选择：${typeName}`);
+            });
+        });
+
+        // 遮挡选项（复选框）
+        const obstructionCheckboxes = document.querySelectorAll('input[name="obstruction"]');
+        obstructionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', e => {
+                updateObstructions();
+            });
+        });
+
+        // 初始化：检查默认值并控制遮挡选项显示
+        const defaultBalcony = document.querySelector('input[name="balconyType"]:checked');
+        if (defaultBalcony && defaultBalcony.value === 'recessed') {
+            document.getElementById('obstructionSection').style.display = 'none';
+        }
+    }
+
+    function updateObstructions() {
+        const checkedBoxes = document.querySelectorAll('input[name="obstruction"]:checked');
+        AppState.obstructions = Array.from(checkedBoxes).map(cb => cb.value);
+        
+        if (AppState.obstructions.length > 0) {
+            const labels = AppState.obstructions.map(obs => {
+                return obs === 'left' ? '左' : obs === 'right' ? '右' : '上';
+            }).join(',');
+            console.log(`🏢 遮挡更新：${labels}`);
+        }
     }
 
     // ===== 地区选择模块 =====
@@ -595,6 +652,19 @@
         // 获取阳台类型显示文本
         const balconyRadio = document.querySelector('input[name="balconyType"]:checked');
         const balconyTypeName = balconyRadio?.closest('label')?.querySelector('strong')?.textContent || '凸出式阳台';
+        
+        // 获取封闭式状态显示文本
+        const enclosedRadio = document.querySelector('input[name="enclosedType"]:checked');
+        const enclosedTypeName = enclosedRadio?.closest('label')?.querySelector('strong')?.textContent || '开放式';
+        
+        // 获取遮挡信息
+        let obstructionText = '无';
+        if (AppState.balconyType === 'protruding' && AppState.obstructions.length > 0) {
+            const obsLabels = AppState.obstructions.map(obs => {
+                return obs === 'left' ? '左' : obs === 'right' ? '右' : '上';
+            });
+            obstructionText = `${obsLabels.join(',')}侧`;
+        }
 
         // 更新结果显示
         updateAnalysisResults({
@@ -603,6 +673,8 @@
             sunrise: sunData.sunrise,
             sunset: sunData.sunset,
             balconyType: balconyTypeName,
+            enclosedType: enclosedTypeName,
+            obstructions: obstructionText,
             location: `${AppState.province || '未定位'}${AppState.city ? ',' + AppState.city : ''}`,
             dayLengthMinutes: sunData.dayLength
         });
@@ -619,6 +691,8 @@
         document.getElementById('resultSunrise').textContent = data.sunrise;
         document.getElementById('resultSunset').textContent = data.sunset;
         document.getElementById('detailBalconyType').textContent = data.balconyType;
+        document.getElementById('detailEnclosedType').textContent = data.enclosedType;
+        document.getElementById('detailObstructions').textContent = data.obstructions;
         document.getElementById('detailLocation').textContent = data.location;
         
         // 计算有效采光时段（简化算法）
@@ -644,18 +718,40 @@
     }
 
     function getEffectiveFactor() {
-        // 根据阳台类型和朝向估算有效采光比例
+        // 根据阳台类型、封闭性、遮挡和朝向估算有效采光比例
         const azimuth = AppState.currentAzimuth || 0;
+        
+        // 1. 朝向系数（南向最优，北向最差）
         let orientationFactor = 1;
-        
-        // 南向最优，北向最差
-        if (azimuth >= 315 || azimuth < 45) orientationFactor = 0.7;  // 北
+        if (azimuth >= 315 || azimuth < 45) orientationFactor = 0.7;      // 北
         else if (azimuth >= 45 && azimuth < 135) orientationFactor = 0.9;  // 东
-        else if (azimuth >= 135 && azimuth < 225) orientationFactor = 1.1;  // 南
-        else orientationFactor = 0.95;  // 西
+        else if (azimuth >= 135 && azimuth < 225) orientationFactor = 1.1; // 南
+        else orientationFactor = 0.95;                                      // 西
         
+        // 2. 阳台类型系数
         let typeFactor = AppState.balconyType === 'protruding' ? 1.35 : 1.0;
-        return Math.min(1.2, orientationFactor * typeFactor / 1.1);
+        
+        // 3. 封闭性系数（封闭式有玻璃损失）
+        let enclosedFactor = AppState.enclosedType === 'open' ? 1.0 : 0.85;
+        
+        // 4. 遮挡系数（仅凸出式适用）
+        let obstructionFactor = 1.0;
+        if (AppState.balconyType === 'protruding' && AppState.obstructions.length > 0) {
+            // 每个遮挡点减少一定比例
+            const obstructionPenalty = 0.12; // 每个遮挡 -12%
+            obstructionFactor = Math.max(0.6, 1.0 - (AppState.obstructions.length * obstructionPenalty));
+            
+            // 根据朝向动态调整遮挡影响
+            if (azimuth >= 45 && azimuth < 135) { // 朝东
+                if (AppState.obstructions.includes('left')) obstructionFactor -= 0.08; // 左侧遮挡对早晨影响更大
+            } else if (azimuth >= 225 && azimuth < 315) { // 朝西
+                if (AppState.obstructions.includes('right')) obstructionFactor -= 0.08; // 右侧遮挡对下午影响更大
+            }
+        }
+        
+        // 综合计算
+        const finalFactor = orientationFactor * typeFactor * enclosedFactor * obstructionFactor / 1.1;
+        return Math.min(1.2, Math.max(0.5, finalFactor)); // 限制在 [0.5, 1.2] 之间
     }
 
     function formatEndTime(decimalHour) {
