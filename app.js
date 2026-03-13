@@ -240,113 +240,92 @@
     }
 
     function startOrientationListener() {
-        console.log('🔄 [启动] 开始注册方向传感器监听器...');
+        console.log('🔄 [启动] 开始注册方向传感器...');
         
-        // 检查设备是否支持方向传感器
+        // 检查设备支持性
         if (typeof DeviceOrientationEvent === 'undefined') {
-            console.warn('⚠️ 此浏览器不支持 DeviceOrientationEvent');
+            console.warn('⚠️ 浏览器不支持 DeviceOrientationEvent');
             showToast('您的浏览器不支持方向传感器');
             setTimeout(() => {
-                if (AppState.isAutoDetecting) toggleAutoDetection(document.getElementById('autoDetectBtn'));
+                const btn = document.getElementById('autoDetectBtn');
+                if (btn && AppState.isAutoDetecting) toggleAutoDetection(btn);
             }, 2000);
             return;
         }
 
-        // iOS 13+ 需要显式请求权限
+        // 创建统一的处理函数
+        orientationHandler = function(event) {
+            let azimuth = null;
+            
+            // iOS Safari: webkitCompassHeading (真实罗盘角度)
+            if (event.webkitCompassHeading !== undefined) {
+                azimuth = event.webkitCompassHeading;
+                console.log(`[iOS Compass] ${azimuth.toFixed(1)}°`);
+            }
+            // Android Chrome: alpha (相对初始位置的旋转角度)
+            else if (event.alpha !== undefined) {
+                // alpha 是相对于页面加载时的设备姿态
+                // 将逆时针的 alpha 转换为顺时针的方位角
+                azimuth = (360 - event.alpha) % 360;
+                if (azimuth < 0) azimuth += 360;
+                console.log(`[Android Alpha] ${event.alpha.toFixed(1)}° → ${(azimuth).toFixed(1)}°`);
+            }
+            
+            // 验证并更新 UI
+            if (azimuth !== null && typeof azimuth === 'number' && !isNaN(azimuth)) {
+                azimuth = Math.round(((azimuth % 360) + 360) % 360);
+                
+                AppState.currentAzimuth = azimuth;
+                updateCompassNeedle(azimuth);
+                document.getElementById('currentAngle').textContent = `${azimuth}°`;
+            }
+        };
+
+        // 尝试请求权限（仅 iOS 13+）
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            console.log('📱 检测到 iOS 13+，请求方向权限...');
             DeviceOrientationEvent.requestPermission()
                 .then(permissionState => {
                     if (permissionState === 'granted') {
-                        registerOrientationHandlers();
+                        console.log('✅ 权限已授予，开始监听...');
+                        registerListeners();
                     } else {
-                        console.warn('⚠️ 方向传感器权限被拒绝');
-                        showToast('需要授权才能使用自动检测功能');
-                        if (AppState.isAutoDetecting) {
-                            toggleAutoDetection(document.getElementById('autoDetectBtn'));
-                        }
+                        console.warn('⚠️ 用户拒绝方向权限');
+                        showToast('请授权方向传感器权限');
+                        const btn = document.getElementById('autoDetectBtn');
+                        if (btn && AppState.isAutoDetecting) toggleAutoDetection(btn);
                     }
                 })
                 .catch(err => {
-                    console.error('❌ 权限请求错误:', err);
-                    showToast('权限请求失败');
-                    if (AppState.isAutoDetecting) {
-                        toggleAutoDetection(document.getElementById('autoDetectBtn'));
-                    }
+                    console.error('❌ 权限请求失败:', err);
+                    showToast('权限请求失败，请重试');
+                    const btn = document.getElementById('autoDetectBtn');
+                    if (btn && AppState.isAutoDetecting) toggleAutoDetection(btn);
                 });
         } else {
-            // 非 iOS 设备或旧版本 iOS
-            registerOrientationHandlers();
+            // 非 iOS 设备直接开始监听
+            console.log('🤖 非 iOS 设备，直接开始监听...');
+            registerListeners();
         }
 
-        function registerOrientationHandlers() {
-            // 主处理函数 - 每次有方向变化时调用
-            orientationHandler = function(event) {
-                let azimuth = null;
-                
-                // ===== iOS Safari: webkitCompassHeading (最可靠) =====
-                if (event.webkitCompassHeading !== undefined) {
-                    azimuth = event.webkitCompassHeading;
-                    console.debug(`[iOS Compass] ${azimuth.toFixed(1)}°`);
-                }
-                // ===== Chrome on Android: alpha (相对值，但最常用) =====
-                else if (event.alpha !== undefined) {
-                    // ⚠️ 注意：alpha 是相对于页面加载时的初始姿态
-                    // 对于绝对北向，需要使用 deviceorientationabsolute
-                    const alpha = event.alpha;
-                    
-                    // 计算方位角：将 alpha 转换为顺时针旋转的角度
-                    // CSS rotate 是顺时针，所以我们需要反转符号
-                    azimuth = (360 - alpha) % 360;
-                    
-                    if (debugEnabled) {
-                        console.log(`[Android Alpha] alpha=${alpha.toFixed(1)}° → azimuth=${azimuth.toFixed(1)}°`);
-                    }
-                }
-                
-                if (azimuth !== null && typeof azimuth === 'number' && !isNaN(azimuth)) {
-                    // 确保在 0-360 范围内
-                    azimuth = Math.round(((azimuth % 360) + 360) % 360);
-                    
-                    // 更新状态和 UI
-                    AppState.currentAzimuth = azimuth;
-                    updateCompassNeedle(azimuth);
-                    document.getElementById('currentAngle').textContent = `${azimuth}°`;
-                }
-            };
-
-            // 添加各种可能的监听器
+        function registerListeners() {
             try {
-                // deviceorientationabsolute - 提供绝对坐标参考（部分设备支持）
-                window.addEventListener('deviceorientationabsolute', orientationHandler, true);
-                console.log('✅ 已注册 deviceorientationabsolute 监听器');
-            } catch (e) {
-                console.log('ℹ️ deviceorientationabsolute 不可用');
+                window.addEventListener('deviceorientation', orientationHandler);
+                console.log('✅ deviceorientation 监听器已注册');
+            } catch (err) {
+                console.error('❌ 无法注册监听器:', err.message);
+                throw err;
             }
 
-            try {
-                // 标准的 deviceorientation 事件（最广泛支持）
-                window.addEventListener('deviceorientation', orientationHandler, { passive: true });
-                console.log('✅ 已注册 deviceorientation 监听器');
-            } catch (e) {
-                console.error('❌ 无法注册 deviceorientation:', e.message);
-                throw e; // 抛出异常让上层知道失败了
-            }
-
-            console.log('📡 方向传感器监听已就绪，请移动设备测试');
-            
-            // iOS 特定提示
-            if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-                console.log('💡 检测到 iOS 设备，建议使用横屏获得更好的精度');
-            }
+            console.log('📡 方向检测已就绪，请移动设备测试');
         }
     }
 
     function stopOrientationListener() {
         if (orientationHandler) {
             try {
-                window.removeEventListener('deviceorientationabsolute', orientationHandler, true);
-                window.removeEventListener('deviceorientation', orientationHandler, { passive: true });
-                console.log('⏹️ 方向传感器监听已移除');
+                window.removeEventListener('deviceorientation', orientationHandler);
+                console.log('⏹️ 方向传感器监听已停止');
             } catch (e) {
                 console.warn('⚠️ 移除监听器出错:', e.message);
             }
