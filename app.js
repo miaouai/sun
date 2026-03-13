@@ -556,12 +556,38 @@
         const checkedBoxes = document.querySelectorAll('input[name="obstruction"]:checked');
         AppState.obstructions = Array.from(checkedBoxes).map(cb => cb.value);
         
-        if (AppState.obstructions.length > 0) {
-            const labels = AppState.obstructions.map(obs => {
-                return obs === 'left' ? '左' : obs === 'right' ? '右' : '上';
-            }).join(',');
-            console.log(`🏢 遮挡更新：${labels}`);
+        // 更新动态提示
+        const tipElement = document.getElementById('obstructionTip');
+        if (tipElement) {
+            const tipText = tipElement.querySelector('.tip-text');
+            const tipIcon = tipElement.querySelector('.tip-icon');
+            
+            const count = AppState.obstructions.length;
+            if (count === 0) {
+                tipIcon.textContent = '✨';
+                tipText.textContent = '暂无遮挡，视野开阔，日照最佳！';
+                tipElement.style.background = '#f0fdf4';
+                tipElement.style.borderColor = '#86efac';
+            } else if (count === 1) {
+                tipIcon.textContent = '🌤️';
+                const labels = {'left': '左', 'right': '右', 'top': '前'};
+                tipText.textContent = `${labels[AppState.obstructions[0]]}侧有遮挡，日照受影响较小`;
+                tipElement.style.background = '#fffbe6';
+                tipElement.style.borderColor = '#fde047';
+            } else if (count === 2) {
+                tipIcon.textContent = '⚠️';
+                tipText.textContent = '两方向有遮挡，有效采光时段明显减少';
+                tipElement.style.background = '#fef3c7';
+                tipElement.style.borderColor = '#fbbf24';
+            } else {
+                tipIcon.textContent = '❗';
+                tipText.textContent = '三向全遮，日照严重不足，建议选择其他朝向';
+                tipElement.style.background = '#fef2f2';
+                tipElement.style.borderColor = '#fca5a5';
+            }
         }
+        
+        console.log(`🏢 遮挡更新：${count}个方向`);
     }
 
     // ===== 地区选择模块 =====

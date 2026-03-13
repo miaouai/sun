@@ -154,7 +154,7 @@
                 <!-- 遮挡选项（仅凸出式阳台显示） -->
                 <div class="config-section obstruction-section" id="obstructionSection" style="display: none;">
                     <h3 class="config-title">周边遮挡情况</h3>
-                    <p class="config-hint">以下方向是否有建筑或墙面遮挡阳光？（可多选）</p>
+                    <p class="config-hint">以下方向是否有建筑或墙面遮挡阳光？（可多选，未勾选表示无遮挡）</p>
                     
                     <div class="obstruction-grid">
                         <label class="checkbox-card">
@@ -162,9 +162,10 @@
                             <div class="card-content">
                                 <span class="card-icon">⬅️</span>
                                 <div class="card-info">
-                                    <strong>左侧是否遮挡？</strong>
-                                    <p>左边有建筑或墙面挡光</p>
+                                    <strong>左侧遮挡</strong>
+                                    <p>左边有建筑挡光</p>
                                 </div>
+                                <span class="checkmark">✅</span>
                             </div>
                         </label>
                         
@@ -173,9 +174,10 @@
                             <div class="card-content">
                                 <span class="card-icon">➡️</span>
                                 <div class="card-info">
-                                    <strong>右侧是否遮挡？</strong>
-                                    <p>右边有建筑或墙面挡光</p>
+                                    <strong>右侧遮挡</strong>
+                                    <p>右边有建筑挡光</p>
                                 </div>
+                                <span class="checkmark">✅</span>
                             </div>
                         </label>
                         
@@ -184,17 +186,24 @@
                             <div class="card-content">
                                 <span class="card-icon">⬆️</span>
                                 <div class="card-info">
-                                    <strong>前方是否遮挡？</strong>
-                                    <p>前方有楼栋遮挡高角度阳光</p>
+                                    <strong>前方遮挡</strong>
+                                    <p>前方楼栋遮挡高角度阳光</p>
                                 </div>
+                                <span class="checkmark">✅</span>
                             </div>
                         </label>
+                    </div>
+                    
+                    <!-- 动态提示 -->
+                    <div class="obstruction-tip" id="obstructionTip">
+                        <span class="tip-icon">✨</span>
+                        <p class="tip-text">暂无遮挡，日照最佳！</p>
                     </div>
                 </div>
 
                 <div class="config-tip">
                     <span class="tip-icon">💡</span>
-                    <p>凸出式阳台视野开阔，日照更充分；内嵌式需关注周边遮挡物高度</p>
+                    <p>凸出式阳台三面采光，视野开阔；内嵌式阳台单面采光，易受两侧墙体遮挡影响</p>
                 </div>
             </div>
         </section>

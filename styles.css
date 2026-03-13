@@ -378,6 +378,17 @@ body {
     filter: grayscale(0);
 }
 
+.checkbox-card input[type="checkbox"]:checked + .card-content .checkmark {
+    display: block; /* 选中时显示 */
+    animation: checkmark-pop 0.3s ease-out;
+}
+
+@keyframes checkmark-pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .checkbox-card .card-content {
     display: flex;
     flex-direction: column;
@@ -395,23 +406,52 @@ body {
     transition: all var(--transition-fast);
 }
 
-.checkbox-card input[type="checkbox"]:checked ~ .card-content .checkmark {
-    display: block;
+.checkbox-card input[type="checkbox"]:checked + .card-content .card-icon {
+    opacity: 1;
+    filter: grayscale(0) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 .checkmark {
     position: absolute;
-    top: 8px;
+    top: 6px;
     right: 8px;
-    width: 20px;
-    height: 20px;
-    background: var(--primary-color);
+    width: 24px;
+    height: 24px;
+    background: #34C759; /* 绿色 */
     color: white;
     border-radius: 50%;
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(52, 199, 89, 0.4);
+    z-index: 10;
+}
+
+/* 遮挡提示区域样式 */
+.obstruction-tip {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #f0fdf4;
+    border-left: 4px solid #86efac;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+}
+
+.obstruction-tip .tip-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.obstruction-tip .tip-text {
+    font-size: 14px;
+    color: #166534;
+    line-height: 1.5;
+    margin: 0;
 }
 
 .checkbox-card .card-info {
