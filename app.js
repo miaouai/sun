@@ -675,27 +675,13 @@
                 AppState.latitude = lat;
                 AppState.longitude = lng;
                 
-                updateLocationDisplay(lat, lng, 'GPS 定位中...');
-                updateFooterInfo(lat, lng, '正在解析地址...');
+                updateLocationDisplay(lat, lng, 'GPS: 定位成功');
                 
                 if (dot) dot.className = 'indicator-dot active';
                 if (text) text.textContent = 'GPS: 定位成功';
 
-                // 尝试反向地理编码
-                reverseGeocode(lat, lng).then(cityName => {
-                    if (cityName) {
-                        AppState.cityName = cityName;
-                        document.getElementById('currentAddress').textContent = cityName;
-                        document.getElementById('footerCityName').textContent = cityName;
-                    } else {
-                        document.getElementById('currentAddress').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                        document.getElementById('footerCityName').textContent = `坐标:${lat.toFixed(2)},${lng.toFixed(2)}`;
-                    }
-                }).catch(err => {
-                    console.log('反向地理编码失败:', err);
-                    document.getElementById('currentAddress').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                    document.getElementById('footerCityName').textContent = `坐标:${lat.toFixed(2)},${lng.toFixed(2)}`;
-                });
+                // 更新底部信息，但不再尝试获取城市名称
+                updateFooterInfo(lat, lng, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
             },
             err => {
                 console.log('定位失败:', err.message);
@@ -703,7 +689,8 @@
                 if (dot) dot.className = 'indicator-dot inactive';
                 if (text) text.textContent = 'GPS: 定位失败';
                 document.getElementById('currentAddress').textContent = '定位失败，请手动设置';
-                document.getElementById('footerCityName').textContent = '未确定';
+                
+                if (footerCityEl) footerCityEl.textContent = '未确定';
                 
                 showToast('GPS 定位失败，请手动选择地区', 3000);
             },
