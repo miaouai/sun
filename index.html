@@ -244,40 +244,130 @@
                     </div>
                 </div>
 
-                <!-- 手动定位模式 -->
+                <!-- 手动定位模式 - 全新设计 -->
                 <div class="location-manual-mode" id="manualLocationPanel" style="display: none;">
-                    <div class="manual-input-section">
-                        <h3>方式一：输入坐标</h3>
+                    <!-- 方式一：坐标输入 -->
+                    <div class="manual-input-section coords-section">
+                        <div class="section-header">
+                            <span class="section-icon">🎯</span>
+                            <h3>方式一：精确坐标</h3>
+                        </div>
                         <div class="coordinate-inputs">
                             <div class="input-group">
-                                <label for="manualLat">纬度</label>
-                                <input type="number" id="manualLat" step="0.000001" placeholder="-90 到 90" min="-90" max="90">
+                                <label for="manualLat">
+                                    <span class="input-icon">🌐</span>
+                                    纬度
+                                </label>
+                                <input type="number" id="manualLat" step="0.000001" placeholder="-90 ~ 90" min="-90" max="90">
+                                <span class="input-hint">可点击地图获取坐标</span>
                             </div>
                             <div class="input-group">
-                                <label for="manualLng">经度</label>
-                                <input type="number" id="manualLng" step="0.000001" placeholder="-180 到 180" min="-180" max="180">
+                                <label for="manualLng">
+                                    <span class="input-icon">🗺️</span>
+                                    经度
+                                </label>
+                                <input type="number" id="manualLng" step="0.000001" placeholder="-180 ~ 180" min="-180" max="180">
+                                <span class="input-hint">北京约 116.4, 重庆约 106.5</span>
                             </div>
                         </div>
-                        <button class="btn btn-coords" id="setCoordsBtn">🎯 设置坐标</button>
+                        <button class="btn btn-coords" id="setCoordsBtn">✓ 应用坐标</button>
                     </div>
                     
-                    <div class="manual-input-section">
-                        <h3>方式二：选择城市</h3>
+                    <!-- 方式二：城市选择 -->
+                    <div class="manual-input-section city-section">
+                        <div class="section-header">
+                            <span class="section-icon">🏙️</span>
+                            <h3>方式二：选择地区</h3>
+                        </div>
+                        <p class="section-desc">从省级到区县的完整覆盖，确保找到您的所在地区</p>
+                        
                         <div class="city-select-wrapper">
                             <select id="citySelectSimple">
-                                <option value="">请选择城市</option>
-                                <!-- 主要城市列表 -->
-                                <optgroup label="直辖市">
-                                    <option value="116.407529,39.904030">北京</option>
-                                    <option value="121.473701,31.230416">上海</option>
-                                    <option value="106.551556,29.563000">重庆</option>
-                                    <option value="117.200983,39.131426">天津</option>
+                                <option value="">请选择地区...</option>
+                                
+                                <!-- 直辖市 - 详细到区 -->
+                                <optgroup label="🏛️ 北京市">
+                                    <option value="116.407529,39.904030">市区 (东城/西城/朝阳等)</option>
+                                    <option value="116.520973,40.095922">顺义区</option>
+                                    <option value="116.936629,40.248144">怀柔区</option>
+                                    <option value="116.299652,40.141417">通州区</option>
+                                    <option value="116.211403,40.007320">大兴区</option>
+                                    <option value="116.071106,39.743652">房山区</option>
+                                    <option value="116.178489,40.196426">昌平区</option>
+                                    <option value="116.251846,40.207836">延庆区</option>
                                 </optgroup>
-                                <optgroup label="省会/首府">
-                                    <option value="113.264434,23.129162">广州</option>
-                                    <option value="113.924301,22.543000">深圳</option>
-                                    <option value="121.466534,31.286281">南京</option>
-                                    <option value="121.610838,31.295572">苏州</option>
+                                
+                                <optgroup label="🏛️ 上海市">
+                                    <option value="121.473701,31.230416">市区 (黄浦/徐汇/浦东等)</option>
+                                    <option value="121.803596,31.385247">浦东新区</option>
+                                    <option value="121.382863,31.210146">闵行区</option>
+                                    <option value="121.370628,31.199005">松江区</option>
+                                    <option value="121.198174,31.374768">奉贤区</option>
+                                    <option value="121.192970,31.427179">嘉定区</option>
+                                </optgroup>
+                                
+                                <optgroup label="🏛️ 重庆市">
+                                    <option value="106.551556,29.563000">主城九区</option>
+                                    <option value="107.088089,28.982845">綦江区</option>
+                                    <option value="108.306189,28.636587">江津区</option>
+                                    <option value="106.870727,29.773064">万州区</option>
+                                    <option value="107.936002,31.885367">长寿区</option>
+                                    <option value="107.965965,29.962895">合川区</option>
+                                    <option value="106.077762,29.323740">永川区</option>
+                                    <option value="106.407774,30.101294">铜梁区</option>
+                                    <option value="106.423221,30.294919">大足区</option>
+                                </optgroup>
+                                
+                                <optgroup label="🏛️ 天津市">
+                                    <option value="117.200983,39.131426">市区 (和平/河东/河西等)</option>
+                                    <option value="117.509847,39.604463">武清区</option>
+                                    <option value="117.302600,38.694423">蓟州区</option>
+                                    <option value="117.095783,39.086844">津南区</option>
+                                </optgroup>
+                                
+                                <optgroup label="广东省">
+                                    <option value="113.264434,23.129162">广州 - 天河区</option>
+                                    <option value="113.323295,23.169556">广州 - 白云区</option>
+                                    <option value="113.924301,22.543000">深圳 - 福田区</option>
+                                    <option value="114.044867,22.562234">深圳 - 宝安区</option>
+                                    <option value="113.568889,22.377222">珠海 - 香洲区</option>
+                                    <option value="113.124167,23.017500">佛山 - 禅城区</option>
+                                </optgroup>
+                                
+                                <optgroup label="浙江省">
+                                    <option value="120.154566,30.274055">杭州 - 西湖区</option>
+                                    <option value="121.545556,28.151111">宁波 - 海曙区</option>
+                                    <option value="120.697222,30.872222">绍兴 - 越城区</option>
+                                </optgroup>
+                                
+                                <optgroup label="江苏省">
+                                    <option value="118.767778,32.060255">南京 - 鼓楼区</option>
+                                    <option value="118.767778,32.060255">南京 - 建邺区</option>
+                                    <option value="118.767778,32.060255">南京 - 雨花台区</option>
+                                    <option value="118.767778,32.060255">南京 - 江宁区</option>
+                                </optgroup>
+                                
+                                <optgroup label="四川省">
+                                    <option value="104.066944,30.665833">成都 - 锦江区</option>
+                                    <option value="104.066944,30.665833">成都 - 武侯区</option>
+                                    <option value="104.066944,30.665833">成都 - 成华区</option>
+                                    <option value="104.066944,30.665833">成都 - 金牛区</option>
+                                    <option value="104.362778,31.164444">绵阳 - 涪城区</option>
+                                </optgroup>
+                                
+                                <optgroup label="港澳台">
+                                    <option value="114.169444,22.319167">香港岛 (中环/湾仔)</option>
+                                    <option value="114.169444,22.319167">九龙</option>
+                                    <option value="114.169444,22.319167">新界</option>
+                                    <option value="113.544042,22.161112">澳门半岛</option>
+                                    <option value="113.544042,22.161112">氹仔</option>
+                                    <option value="113.544042,22.161112">路环</option>
+                                </optgroup>
+                            </select>
+                            <button class="btn btn-apply-city" id="applyCityBtn">使用此地区</button>
+                        </div>
+                    </div>
+                </div>
                                     <option value="120.154566,30.274055">杭州</option>
                                     <option value="121.545077,31.210209">无锡</option>
                                     <option value="121.120242,30.653777">常州</option>
