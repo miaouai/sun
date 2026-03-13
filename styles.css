@@ -203,50 +203,35 @@ body {
     left: 50%;
     width: 0;
     height: 0;
-    /* 初始状态居中，后续通过 JS 添加旋转 */
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* 初始不设 transform，由 JS 动态控制旋转 */
 }
 
 /* 北向指针（红色）- 向上延伸 */
 .compass-needle::before {
     content: '';
     position: absolute;
-    top: 50%;
+    bottom: 50%;  /* 从中心点开始，这样 rotate 时它会绕中心转 */
     left: 50%;
     width: 0;
     height: 0;
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 75px solid var(--error-color); /* 红色指向北方 */
+    border-bottom: 85px solid var(--error-color); /* 红色指北 - 向上 */
 }
 
 /* 南向指针（灰色）- 向下延伸 */
 .compass-needle::after {
     content: '';
     position: absolute;
-    top: 50%;
+    top: 50%;   /* 从中心点开始 */
     left: 50%;
     width: 0;
     height: 0;
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 75px solid var(--text-secondary); /* 灰色指向南方 */
-}
-
-/* 中心装饰点 */
-.compass-needle .needle-center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
-    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    border-top: 85px solid var(--text-secondary); /* 灰色指南 - 向下 */
 }
 
 .compass-current-angle {
