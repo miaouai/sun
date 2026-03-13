@@ -680,8 +680,8 @@
                 if (dot) dot.className = 'indicator-dot active';
                 if (text) text.textContent = 'GPS: 定位成功';
 
-                // 更新底部信息，但不再尝试获取城市名称
-                updateFooterInfo(lat, lng, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                // 更新底部信息，但不再尝试获取城市名称（显示"当前位置"）
+                updateFooterInfo(lat, lng, null);
             },
             err => {
                 console.log('定位失败:', err.message);
@@ -754,7 +754,12 @@
         }
         
         if (cityEl) {
-            cityEl.textContent = cityName || '未确定';
+            // 如果是自动定位模式且没有明确的城市名，显示"当前位置"
+            if (AppState.locationMode === 'auto' && !cityName) {
+                cityEl.textContent = '当前位置';
+            } else {
+                cityEl.textContent = cityName || '未确定';
+            }
         }
     }
 
