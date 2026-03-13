@@ -215,10 +215,12 @@
             document.getElementById('modeDisplay').textContent = '自动检测中...';
             document.getElementById('modeDisplay').style.color = '#34C759';
             
-            // 禁用手动输入框
-            document.getElementById('manualAngleInput').disabled = true;
-            document.getElementById('manualSetBtn').disabled = true;
-            document.getElementById('manualAngleInput').placeholder = '自动检测中...';
+            // 禁用手动输入框和确认按钮
+            const manualInput = document.getElementById('manualAngleInput');
+            const manualBtn = document.getElementById('manualSetBtn');
+            manualInput.disabled = true;
+            manualBtn.disabled = true;
+            manualInput.placeholder = '自动检测中...';
             
             startOrientationListener();
         } else {
@@ -231,11 +233,13 @@
             
             stopOrientationListener();
             
-            // 启用手动输入框并重置状态
-            document.getElementById('manualAngleInput').disabled = false;
-            document.getElementById('manualSetBtn').disabled = false;
-            document.getElementById('manualAngleInput').placeholder = '输入角度 (0-360)';
-            document.getElementById('manualAngleInput').value = '';
+            // 启用手动输入框和确认按钮（变为绿色）
+            const manualInput = document.getElementById('manualAngleInput');
+            const manualBtn = document.getElementById('manualSetBtn');
+            manualInput.disabled = false;
+            manualBtn.disabled = false;
+            manualInput.placeholder = '输入角度 (0-360)';
+            manualInput.value = '';
         }
     }
 
@@ -359,11 +363,17 @@
         function showAndroidPermissionGuide() {
             const guideHTML = `
                 <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                    <strong>📱 Android 设备使用说明：</strong><br>
-                    <small>某些国产 ROM（如 MIUI、EMUI）可能限制了传感器访问。<br>
-                    如果检测到无数据，请：<br>
-                    1. 在应用信息中允许"身体传感器"权限<br>
-                    2. 重启浏览器后重试</small>
+                    <strong style="color: #856404; display: block; margin-bottom: 8px;">📱 Android 设备使用说明：</strong>
+                    <small style="color: #6c5b2e; line-height: 1.6;">
+                        <p style="margin: 4px 0;">某些国产 ROM（如 MIUI、EMUI）可能限制了传感器访问。</p>
+                        <strong style="display: block; margin-top: 8px;">如果检测到无数据，请：</strong>
+                        1. 在应用信息中允许"身体传感器"权限<br>
+                        2. 重启浏览器后重试<br>
+                        <a href="#" onclick="openCompassApp(); return false;" 
+                           style="color: #007bff; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 8px;">
+                           🧭 打开手机指南针 App 获取精确度数
+                        </a>
+                    </small>
                 </div>
             `;
             
@@ -379,6 +389,51 @@
                 }
             }
         }
+        
+        // 打开手机指南针 App 的函数（需要全局可访问）
+        window.openCompassApp = function() {
+            console.log('🧭 尝试打开指南针 App...');
+            
+            // 不同品牌的意图格式
+            const intents = [
+                // 通用 Android Intent
+                'intent://com.google.android.apps.maps/#Intent;scheme=com.google.android.apps.maps;end',
+                // 华为/荣耀指南针
+                'intent://com.huawei.compass/#Intent;scheme=com.huawei.compass;end',
+                // 小米指南针
+                'intent://com.miui.compass/#Intent;scheme=com.miui.compass;end',
+                // OPPO/VIVO指南针
+                'intent://com.coloros.compass/#Intent;scheme=com.coloros.compass;end',
+                // Samsung 指南针
+                'intent://samsung.android.app.bixbyvision.service#Intent;scheme=samsung.android.app.bixbyvision.service;end',
+            ];
+            
+            let opened = false;
+            
+            // 先尝试直接跳转到设置中的指南针
+            try {
+                // iOS Safari: 使用 intent 或 x-callback-url
+                if (navigator.userAgent.match(/iPhone|iPad/i)) {
+                    window.location.href = 'x-apple-compass://';
+                    opened = true;
+                }
+                // Android: 尝试多个可能的 package
+                else if (navigator.userAgent.match(/Android/i)) {
+                    // 方法 1: 通过 Chrome Custom Tab 尝试打开
+                    window.location.href = 'https://play.google.com/store/apps/details?id=com.google.android.apps.maps';
+                    
+                    // 同时提示用户
+                    showToast('如自动跳转失败，请手动打开：设置 > 应用 > 指南针');
+                    opened = true;
+                }
+            } catch (err) {
+                console.warn('自动跳转失败:', err.message);
+            }
+            
+            if (!opened) {
+                showToast('请手动打开手机自带的指南针 App');
+            }
+        };
 
         function registerListeners() {
             try {
