@@ -570,12 +570,18 @@ body {
 
 /* 模块头部区域 - 添加切换按钮 */
 .location-module .module-header {
+    position: relative; /* 为绝对定位的子元素提供参考 */
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-right: 160px; /* 给切换按钮留出空间 */
 }
 
 .mode-switch-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -589,11 +595,13 @@ body {
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+    z-index: 10;
 }
 
 .mode-switch-btn:hover {
     border-color: var(--primary-color);
-    transform: translateY(-1px);
+    transform: translateY(-50%) scale(1.05);
     box-shadow: var(--shadow-md);
 }
 
@@ -717,66 +725,98 @@ body {
     display: none;  /* 默认隐藏 */
 }
 
-.location-manual-mode h3 {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    margin-top: 20px;
+.manual-input-section {
+    background: #FAFAFA;
+    border-radius: var(--radius-md);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 16px;
+    transition: all var(--transition-fast);
+}
+
+.manual-input-section:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--primary-light);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.section-icon {
+    font-size: 20px;
+}
+
+.manual-input-section h3 {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.location-manual-mode h3:first-child {
-    margin-top: 0;
-}
-
-.manual-input-section {
-    background: #FAFAFA;
-    border-radius: var(--radius-md);
-    padding: 16px;
-    border: 1px solid var(--border-color);
-}
-
-.manual-input-section:first-of-type {
-    margin-top: 0;
+.section-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: -8px;
+    margin-bottom: 16px;
 }
 
 .coordinate-inputs {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 16px;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .input-group label {
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
     color: var(--text-secondary);
     font-weight: 600;
 }
 
+.input-icon {
+    font-size: 14px;
+}
+
 .input-group input {
-    padding: 12px;
+    padding: 14px 16px;
     border: 2px solid var(--border-color);
     border-radius: var(--radius-sm);
     font-size: 14px;
-    transition: border-color var(--transition-fast);
+    transition: all var(--transition-fast);
     background: white;
+    font-family: monospace;
 }
 
 .input-group input:focus {
     outline: none;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+}
+
+.input-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
 }
 
 .btn-coords {
     width: 100%;
-    padding: 12px 20px;
+    padding: 14px 20px;
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
     color: white;
     border: none;
@@ -800,7 +840,7 @@ body {
 .city-select-wrapper {
     display: flex;
     gap: 12px;
-    align-items: flex-end;
+    align-items: stretch;
 }
 
 #citySelectSimple {
@@ -814,11 +854,13 @@ body {
     transition: border-color var(--transition-fast);
     max-height: 200px;
     overflow-y: auto;
+    cursor: pointer;
 }
 
 #citySelectSimple:focus {
     outline: none;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
 }
 
 #citySelectSimple optgroup {
@@ -828,10 +870,12 @@ body {
 }
 
 #citySelectSimple option {
-    padding: 8px;
+    padding: 10px 12px;
+    white-space: nowrap;
 }
 
 .btn-apply-city {
+    min-width: 120px;
     padding: 12px 20px;
     background: linear-gradient(135deg, var(--success-color) 0%, #30D158 100%);
     color: white;
