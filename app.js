@@ -765,9 +765,9 @@
         // 3. 封闭性系数（开放式最优，全封闭最差）
         let enclosedFactor = 1.0;
         switch(AppState.enclosedType) {
-            case 'open': enclosedFactor = 1.0; break;          // 完全开放
-            case 'semi-closed': enclosedFactor = 0.92; break;  // 半封闭 -8%
-            case 'closed': enclosedFactor = 0.85; break;       // 全封闭 -15%
+            case 'open': enclosedFactor = 1.0; break;          // 完全开放：无损失
+            case 'semi-closed': enclosedFactor = 0.92; break;  // 半封闭：轻微损失
+            case 'closed': enclosedFactor = 0.85; break;       // 全封闭：明显损失
             default: enclosedFactor = 1.0;
         }
         
