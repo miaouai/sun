@@ -570,8 +570,14 @@
                 tipElement.style.borderColor = '#86efac';
             } else if (count === 1) {
                 tipIcon.textContent = '🌤️';
-                const labels = {'left': '左', 'right': '右', 'top': '前'};
-                tipText.textContent = `${labels[AppState.obstructions[0]]}侧有遮挡，日照受影响较小`;
+                const obs = AppState.obstructions[0];
+                if (obs === 'left') {
+                    tipText.textContent = '左侧有遮挡，早晨日照受影响较小';
+                } else if (obs === 'right') {
+                    tipText.textContent = '右侧有遮挡，傍晚日照受影响较小';
+                } else if (obs === 'top') {
+                    tipText.textContent = '顶部有遮挡，正午高角度阳光受阻';
+                }
                 tipElement.style.background = '#fffbe6';
                 tipElement.style.borderColor = '#fde047';
             } else if (count === 2) {
