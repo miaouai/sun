@@ -501,6 +501,8 @@
 
     // ===== 阳台配置模块（增强版）=====
     function setupBalconyConfig() {
+        const obstructionSection = document.getElementById('obstructionSection');
+        
         // 阳台类型切换
         const balconyRadios = document.querySelectorAll('input[name="balconyType"]');
         balconyRadios.forEach(radio => {
@@ -509,7 +511,6 @@
                 const typeName = e.target.closest('label').querySelector('strong').textContent;
                 
                 // 控制遮挡选项的显示/隐藏
-                const obstructionSection = document.getElementById('obstructionSection');
                 if (e.target.value === 'protruding') {
                     obstructionSection.style.display = 'block';
                     showToast(`已选择：${typeName}`);
@@ -517,7 +518,7 @@
                     obstructionSection.style.display = 'none';
                     AppState.obstructions = []; // 清空遮挡
                     document.querySelectorAll('input[name="obstruction"]').forEach(cb => cb.checked = false);
-                    showToast(`已选择：${typeName}（内嵌式无需考虑周边遮挡）`);
+                    showToast(`已选择：${typeName}（内嵌式默认全遮挡）`);
                 }
             });
         });
@@ -540,10 +541,14 @@
             });
         });
 
-        // 初始化：检查默认值并控制遮挡选项显示
+        // 初始化：凸出式阳台默认显示遮挡选项，内嵌式默认隐藏
         const defaultBalcony = document.querySelector('input[name="balconyType"]:checked');
-        if (defaultBalcony && defaultBalcony.value === 'recessed') {
-            document.getElementById('obstructionSection').style.display = 'none';
+        if (defaultBalcony) {
+            if (defaultBalcony.value === 'protruding') {
+                obstructionSection.style.display = 'block';
+            } else {
+                obstructionSection.style.display = 'none';
+            }
         }
     }
 
