@@ -569,6 +569,16 @@
                 autoPanel.style.display = 'none';
                 manualPanel.style.display = 'block';
                 showToast('已切换至手动定位模式');
+                
+                // 懒加载：切换到手动模式时才初始化城市联级菜单
+                setTimeout(() => {
+                    if (typeof window.initCityCascadeMenu === 'function') {
+                        console.log('🏙️ [联级菜单] 开始初始化城市选择器...');
+                        window.initCityCascadeMenu();
+                    } else {
+                        console.warn('⚠️ 未找到 initCityCascadeMenu，联级菜单模块可能未加载');
+                    }
+                }, 100);
             } else {
                 // 切换到自动模式
                 AppState.locationMode = 'auto';
@@ -618,38 +628,10 @@
             });
         }
 
-        // 应用城市选择
+        // 应用城市选择（已移除：联级菜单会自动保存）
         if (applyCityBtn && citySelectSimple) {
-            applyCityBtn.addEventListener('click', () => {
-                const selectedValue = citySelectSimple.value;
-                
-                if (!selectedValue) {
-                    showToast('请先选择一个城市');
-                    return;
-                }
-
-                // 解析经纬度
-                const [lng, lat] = selectedValue.split(',').map(parseFloat);
-                
-                if (isNaN(lat) || isNaN(lng)) {
-                    showToast('城市数据异常');
-                    return;
-                }
-
-                // 更新状态
-                AppState.latitude = lat;
-                AppState.longitude = lng;
-
-                // 获取城市名称（从 select 的 text）
-                const cityName = citySelectSimple.options[citySelectSimple.selectedIndex].text;
-                AppState.cityName = cityName;
-
-                // 更新 UI 显示
-                updateLocationDisplay(lat, lng, cityName);
-                updateFooterInfo(lat, lng, cityName);
-
-                showToast(`已设置为${cityName}`);
-            });
+            // TODO: 已迁移到 cities-cascade.js 模块，不再使用老式单选框
+            console.log('🏙️ [位置模块] 使用新的联级菜单系统');
         }
     }
 

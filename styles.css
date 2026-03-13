@@ -579,7 +579,7 @@ body {
 
 .mode-switch-btn {
     position: absolute;
-    right: 0;
+    right: 20px; /* 保持与右边框的距离 */
     top: 50%;
     transform: translateY(-50%);
     display: flex;
