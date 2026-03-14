@@ -328,11 +328,22 @@ body {
     gap: 12px;
 }
 
-/* 封闭式选项样式 */
+/* 封闭式选项样式 - 支持多个选项 */
 .binary-selector {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .binary-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* 最后一个选项单独一行（奇数情况） */
+    .binary-option:last-child:nth-child(odd) {
+        grid-column: span 2;
+    }
 }
 
 .binary-option:hover {
