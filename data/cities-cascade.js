@@ -41,7 +41,8 @@
             const province = item.province;
             const city = item.city || '市辖区';
             const area = item.area || '';
-            const coords = `${item.lng},${item.lat}`;
+            // ✅ 修复：统一使用 "lat,lng" 顺序（纬度在前，经度在后）
+            const coords = `${item.lat},${item.lng}`;
             
             if (!provinceMap.has(province)) {
                 provinceMap.set(province, new Map());
@@ -186,22 +187,46 @@
         if (footerCoords) footerCoords.textContent = coords;
         if (footerCity) footerCity.textContent = name;
         
-        // 解析坐标：JSON 中是 lng,lat 顺序，所以 split(',')[0]是经度，[1]是纬度
-        const lng = parseFloat(coords.split(',')[0]);
-        const lat = parseFloat(coords.split(',')[1]);
+        // ✅ 修复：coords 格式是 "lat,lng"（纬度在前，经度在后）
+        const lat = parseFloat(coords.split(',')[0]);  // 第一个是纬度
+        const lng = parseFloat(coords.split(',')[1]);  // 第二个是经度
+        
+        console.log(`🔍 [坐标解析] 原始字符串："${coords}" → lat=${lat}, lng=${lng}`);
+        
+        // ✅ 关键修复：使用 window.AppState 确保与 app.js 共享同一个对象
+        if (!window.AppState) {
+            console.error('❌ window.AppState 不存在！app.js 可能未正确加载');
+            return;
+        }
         
         // 保存到 AppState - 同时更新主坐标和备用坐标
-        AppState.manualLat = lat;
-        AppState.manualLng = lng;
-        AppState.lastSelectedCity = name;
+        window.AppState.manualLat = lat;
+        window.AppState.manualLng = lng;
+        window.AppState.lastSelectedCity = name;
         
-        // 同步到主定位状态（这样"使用此位置"按钮也能读取到）
-        AppState.latitude = lat;
-        AppState.longitude = lng;
-        AppState.cityName = name;
+        // ⚠️ 关键：同步到主定位状态（这样"开始分析"能读取到正确的坐标）
+        window.AppState.latitude = lat;
+        window.AppState.longitude = lng;
+        window.AppState.cityName = name;
         
-        console.log(`📍 已选择位置：${name}, 坐标：lng=${lng}, lat=${lat}`);
-        showToast(`已选择：${name}`);
+        console.log(`💾 [AppState 保存] latitude=${window.AppState.latitude}, longitude=${window.AppState.longitude}`);
+        
+        // ✅ 同步更新手动模式的坐标输入框显示
+        const manualLatInput = document.getElementById('manualLat');
+        const manualLngInput = document.getElementById('manualLng');
+        if (manualLatInput) manualLatInput.value = lat.toFixed(6);
+        if (manualLngInput) manualLngInput.value = lng.toFixed(6);
+        
+        // ✅ 同步更新自动定位面板的经纬度显示
+        const autoLatitudeEl = document.getElementById('latitudeValue');
+        const autoLongitudeEl = document.getElementById('longitudeValue');
+        const currentAddressEl = document.getElementById('currentAddress');
+        if (autoLatitudeEl) autoLatitudeEl.textContent = lat.toFixed(6);
+        if (autoLongitudeEl) autoLongitudeEl.textContent = lng.toFixed(6);
+        if (currentAddressEl) currentAddressEl.textContent = name;
+        
+        console.log(`📍 已选择位置：${name}, 最终坐标：lat=${lat}, lng=${lng}`);
+        showToast(`已选择：${name} [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
     }
     
     // 初始化钩子
