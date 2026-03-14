@@ -64,6 +64,122 @@ const HORIZONTAL_MARGIN = 85;
 const VERTICAL_FULL_BLOCK = 90;
 
 // =============================================================================
+// NOAA 高精度日出日落计算函数 (内联版本)
+// =============================================================================
+
+/**
+ * NOAA 算法计算日出日落时间 (v3.0 Universal - 绝对通用版)
+ * @param {number} lat - 纬度 (-90 到 90)
+ * @param {number} lon - 经度 (-180 到 180)
+ * @param {string} dateStr - 日期 (YYYY-MM-DD)
+ * @param {number} timezone - 时区偏移 (小时，默认 8 为中国标准时间)
+ * @returns {object} {sunrise, sunset, solarNoon, dayLengthMinutes, polarDay, polarNight}
+ */
+function calculateNOAASunTimes(lat, lon, dateStr, timezone = 8) {
+    // ===== 验证输入 =====
+    if (lat < -90 || lat > 90) {
+        console.error(`纬度无效：${lat}`);
+        return { sunrise: null, sunset: null, solarNoon: null, dayLengthMinutes: 0, polarDay: false, polarNight: true };
+    }
+    if (lon < -180 || lon > 180) {
+        console.error(`经度无效：${lon}`);
+        return { sunrise: null, sunset: null, solarNoon: null, dayLengthMinutes: 0, polarDay: false, polarNight: true };
+    }
+    
+    const [year, month, day] = dateStr.split('-').map(Number);
+    
+    // Step 1: 儒略日
+    let jy = year;
+    let jm = month;
+    if (jm <= 2) { jy -= 1; jm += 12; }
+    const A = Math.floor(jy / 100);
+    const B = 2 - A + Math.floor(A / 4);
+    const JD = Math.floor(365.25 * (jy + 4716)) + Math.floor(30.6001 * (jm + 1)) + day + B - 1524.5;
+    
+    // Step 2: 儒略世纪数
+    const T = (JD - 2451545.0) / 36525.0;
+    
+    // Step 3: 地球轨道偏心率 e
+    const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+    
+    // Step 4: 太阳平近点角 M (度)
+    const M_deg = ((357.52911 + T * (35999.05029 - 0.0001537 * T)) % 360 + 360) % 360;
+    const M_rad = M_deg * DEG_TO_RAD;
+    
+    // Step 5: 方程中心 C (度)
+    const C_deg = (1.914602 - T * (0.004817 + 0.000014 * T)) * Math.sin(M_rad) +
+                  (0.019993 - 0.000101 * T) * Math.sin(2 * M_rad) +
+                  0.000289 * Math.sin(3 * M_rad);
+    
+    // Step 6: 太阳真黄经 L_sun (度)
+    const L0_deg = 280.46646 + T * (36000.76983 + 0.0003032 * T);
+    const L_sun_deg = ((L0_deg + C_deg) % 360 + 360) % 360;
+    const L_sun_rad = L_sun_deg * DEG_TO_RAD;
+    
+    // Step 7: 视黄道倾角 epsilon (更精确)
+    const omega_deg = ((125.04 - 1934.136 * T) % 360 + 360) % 360;
+    const epsilon_0_deg = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+    const epsilon_deg = epsilon_0_deg - 0.00256 * Math.cos(omega_deg * DEG_TO_RAD);
+    const epsilon_rad = epsilon_deg * DEG_TO_RAD;
+    
+    // Step 8: 太阳赤纬 delta (弧度)
+    const declinationRad = Math.asin(Math.sin(epsilon_rad) * Math.sin(L_sun_rad));
+    
+    // Step 9: 时差修正 Eq_time (分钟)
+    const y = Math.tan(epsilon_rad / 2) * Math.tan(epsilon_rad / 2);
+    const EqTime_minutes = RAD_TO_DEG * (
+        y * Math.sin(2 * L_sun_rad) -
+        2 * e * Math.sin(M_rad) +
+        4 * e * y * Math.sin(M_rad) * Math.cos(2 * L_sun_rad) -
+        0.5 * y * y * Math.sin(4 * L_sun_rad) -
+        1.25 * e * e * Math.sin(2 * M_rad)
+    ) * 4;
+    
+    // Step 10: 时角 H (使用 90.833° 标准天顶角)
+    const latRad = lat * DEG_TO_RAD;
+    const zenithRad = 90.833 * DEG_TO_RAD;
+    const cosH = (Math.cos(zenithRad) - Math.sin(latRad) * Math.sin(declinationRad)) / 
+                 (Math.cos(latRad) * Math.cos(declinationRad));
+    
+    if (cosH < -1) return { sunrise: null, sunset: null, solarNoon: null, dayLengthMinutes: 1440, polarDay: true, polarNight: false, note: '极昼' };
+    if (cosH > 1) return { sunrise: null, sunset: null, solarNoon: null, dayLengthMinutes: 0, polarDay: false, polarNight: true, note: '极夜' };
+    
+    const H_rad = Math.acos(cosH);
+    const H_deg = H_rad * RAD_TO_DEG;
+    
+    // Step 11: 太阳时正午 → 本地时间 (完全参数化!)
+    // 公式：UTC 分钟 = 720 - 4*经度 - EqTime
+    //      本地时间 = UTC + 时区偏移
+    const solarNoon_UTC_min = 720 - 4 * lon - EqTime_minutes;
+    const localSolarNoon_hours = solarNoon_UTC_min / 60 + timezone;
+    
+    const sunrise_UTC_min = solarNoon_UTC_min - 4 * H_deg;
+    const sunset_UTC_min = solarNoon_UTC_min + 4 * H_deg;
+    
+    const sunrise_hours = sunrise_UTC_min / 60 + timezone;
+    const sunset_hours = sunset_UTC_min / 60 + timezone;
+    
+    function formatTime(decimalHour) {
+        decimalHour = ((decimalHour % 24) + 24) % 24;
+        const h = Math.floor(decimalHour);
+        const m = Math.round((decimalHour - h) * 60);
+        if (m >= 60) return `${String((h + 1) % 24).padStart(2, '0')}:00`;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    
+    return {
+        sunrise: formatTime(sunrise_hours),
+        sunset: formatTime(sunset_hours),
+        solarNoon: formatTime(localSolarNoon_hours),
+        dayLengthMinutes: Math.round((sunset_hours - sunrise_hours) * 60),
+        polarDay: false,
+        polarNight: false,
+        eq_time: EqTime_minutes,
+        declination_deg: declinationRad * RAD_TO_DEG
+    };
+}
+
+// =============================================================================
 // 工具函数
 // =============================================================================
 
@@ -405,65 +521,87 @@ function calculateSunlight(params) {
     log('  遮挡情况:', {左墙: hasLeftWall, 右墙: hasRightWall, 雨蓬: hasRoof});
     
     // -------------------------------------------------------------------------
-    // Step A: 天文参数计算
     // -------------------------------------------------------------------------
-    log('\n========== Step A: 天文参数计算 ==========');
+    // Step A: 天文参数计算 (使用 NOAA 高精度算法)
+    // -------------------------------------------------------------------------
+    log('\n========== Step A: 天文参数计算 (NOAA 算法) ==========');
     
-    // 解析日期
-    const date = new Date(dateStr + 'T00:00:00'); // 使用本地时间避免时区问题
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    
-    // A1: 计算积日 N
-    const N = calculateDayOfYear(year, month, day);
-    log('Step A1: 积日 N =', N, '(', year, '年', month, '月', day, '日)');
-    
-    // A2: 计算太阳赤纬角 δ
-    const declinationRad = calculateSolarDeclination(N);
-    
-    // A3: 计算日落时角 Hs
-    const latRad = lat * DEG_TO_RAD;
-    const Hs = calculateSunsetHourAngle(latRad, declinationRad);
+    // 使用 NOAA 算法计算日出日落时间
+    const noaaResult = calculateNOAASunTimes(lat, lon, dateStr, params.timezone || 8);
     
     // 处理极昼极夜
-    if (Hs === 0) {
-        // 极夜
+    if (noaaResult.polarNight) {
+        log('Step A: 检测到极夜 - 当日无日照');
         return {
             durationHours: 0,
             sunrise: '--:--',
             sunset: '--:--',
+            solarNoon: '--:--',
+            dayLengthMinutes: 0,
             periods: [],
-            note: '极夜: 当日无日照'
+            note: '极夜：当日无日照',
+            polarNight: true,
+            polarDay: false
         };
     }
     
-    // A4: 计算时间修正
+    if (noaaResult.polarDay) {
+        log('Step A: 检测到极昼 - 全天 24 小时日照');
+        return {
+            durationHours: 24,
+            sunrise: '--:--',
+            sunset: '--:--',
+            solarNoon: '--:--',
+            dayLengthMinutes: 1440,
+            periods: [],
+            note: '极昼：全天 24 小时日照',
+            polarNight: false,
+            polarDay: true
+        };
+    }
+    
+    const sunriseStr = noaaResult.sunrise;
+    const sunsetStr = noaaResult.sunset;
+    const solarNoonStr = noaaResult.solarNoon;
+    const dayLengthMinutes = noaaResult.dayLengthMinutes;
+    
+    log('Step A: NOAA 高精度日出日落时间');
+    log('  日出:', sunriseStr);
+    log('  日落:', sunsetStr);
+    log('  正午:', solarNoonStr);
+    log('  白昼时长:', dayLengthMinutes, '分钟');
+    
+    // 从白昼时长计算时角 Hs (弧度)
+    // H_deg = 白昼时长 (小时) × 15°/2 = (dayLengthMinutes / 60) × 15 / 2
+    const HsDeg = (dayLengthMinutes / 60) * 7.5;
+    const Hs = HsDeg * DEG_TO_RAD;
+    log('Step A: 日落时角 Hs =', HsDeg.toFixed(4), '° =', Hs.toFixed(6), 'rad');
+    
+    // ⚠️ 重要：恢复 Step B & C 遮挡判断需要的参数
+    // 日出日落时间用 NOAA 高精度算法，但遮挡计算仍需要标准天文参数
+    
+    // 计算积日 N (用于太阳赤纬计算)
+    const dateObj = new Date(dateStr + 'T00:00:00');
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+    const dayOfYear = calculateDayOfYear(year, month, day);
+    
+    // 纬度转弧度
+    const latRad = lat * DEG_TO_RAD;
+    
+    // 太阳赤纬角 δ (弧度)
+    const declinationRad = calculateSolarDeclination(dayOfYear);
+    
+    // 时间修正 (经度修正 + 时差修正的简化版，仅用经度修正)
     const timeCorrection = calculateTimeCorrection(lon);
     
-    // 计算理论日出日落时间 (当地时间)
-    // 正午12点对应时角为0，日出对应时角为 -Hs，日落对应时角为 +Hs
-    // 时角转时间: 时间(小时) = 时角(度) / 15
-    const HsDeg = Hs * RAD_TO_DEG;
-    const sunriseHourAngle = -HsDeg; // 日出时角 (度)
-    const sunsetHourAngle = HsDeg;   // 日落时角 (度)
+    log('Step A: 计算遮挡判断辅助参数');
+    log('  积日 N:', dayOfYear);
+    log('  纬度弧度:', latRad.toFixed(6), 'rad');
+    log('  太阳赤纬:', (declinationRad * RAD_TO_DEG).toFixed(4), '°');
+    log('  时间修正:', timeCorrection.toFixed(4), '小时');
     
-    // 理论日出日落时间 (真太阳时)
-    const sunriseTrueSolarTime = 12 + sunriseHourAngle / 15;
-    const sunsetTrueSolarTime = 12 + sunsetHourAngle / 15;
-    
-    // 转换为当地时间 (考虑经度修正)
-    const sunriseLocalTime = sunriseTrueSolarTime - timeCorrection;
-    const sunsetLocalTime = sunsetTrueSolarTime - timeCorrection;
-    
-    const sunriseStr = formatTime(sunriseLocalTime);
-    const sunsetStr = formatTime(sunsetLocalTime);
-    
-    log('Step A5: 理论日出日落时间');
-    log('  真太阳时: 日出', formatTime(sunriseTrueSolarTime), ', 日落', formatTime(sunsetTrueSolarTime));
-    log('  当地时间: 日出', sunriseStr, ', 日落', sunsetStr);
-    
-    // -------------------------------------------------------------------------
     // Step B & C: 时间循环与遮挡判定
     // -------------------------------------------------------------------------
     log('\n========== Step B & C: 时间循环与遮挡判定 ==========');
@@ -583,6 +721,8 @@ function calculateSunlight(params) {
         durationHours: durationHours,
         sunrise: sunriseStr,
         sunset: sunsetStr,
+        solarNoon: solarNoonStr,
+        dayLengthMinutes: dayLengthMinutes,
         periods: periods,
         note: note
     };
