@@ -5,13 +5,32 @@
     let provinceMapCache = null;
     
     function initCityCascadeMenu() {
-        // 添加时间戳防止缓存
-        fetch('data/cities-full.json?t=' + Date.now())
-            .then(response => response.json())
-            .then(data => buildCityCascadeMenu(data))
+        console.log('🏙️ [城市联级] initCityCascadeMenu 被调用');
+        console.log('🏙️ [城市联级] 当前页面 URL:', window.location.href);
+        
+        // 相对路径：从 index.html 的视角，cities-full.json 在 data/ 目录下
+        const url = 'data/cities-full.json';
+        console.log('🏙️ [城市联级] 尝试加载:', url);
+        console.log('🏙️ [城市联级] 工作目录应该是:/app/working/mydata/sun');
+        
+        fetch(url)
+            .then(response => {
+                console.log('🏙️ [城市联级] fetch response status:', response.status, 'ok:', response.ok);
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('🏙️ [城市联级] JSON 解析成功，数据条数:', data.length);
+                buildCityCascadeMenu(data);
+            })
             .catch(err => {
-                console.error('加载城市数据失败:', err);
-                showToast('城市数据加载失败');
+                console.error('🏙️ [城市联级] 加载失败:', err);
+                console.error('🏙️ [城市联级] 错误详情:', err.message);
+                if (typeof showToast === 'function') {
+                    showToast('城市数据加载失败：' + err.message);
+                } else {
+                    alert('城市数据加载失败\n\nURL:' + url + '\n\n错误:' + err.message + '\n\n请确保：\n1. 使用 HTTP 服务器运行（python3 -m http.server 8080）\n2. 访问 http://localhost:8080/index.html');
+                }
             });
     }
     

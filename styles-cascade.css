@@ -120,3 +120,82 @@
     margin-top: 8px;
     width: 100%;
 }
+
+/* 日照分析新增样式 */
+.rating-details {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+    background: rgba(255, 149, 0, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.rating-details li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.rating-details li:last-child {
+    border-bottom: none;
+}
+
+.rating-details li::before {
+    content: '✓ ';
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.sunlight-window {
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.1), rgba(255, 204, 0, 0.1));
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 12px;
+    border: 2px solid rgba(255, 149, 0, 0.2);
+}
+
+.window-time {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.window-duration {
+    font-size: 15px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.window-quality {
+    font-size: 14px;
+    text-align: center;
+    padding: 4px 12px;
+    background: rgba(255, 149, 0, 0.15);
+    border-radius: 12px;
+    display: inline-block;
+    margin: 0 auto 12px;
+    display: block;
+    width: fit-content;
+}
+
+.window-suggestion {
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: center;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.no-window {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 20px;
+}

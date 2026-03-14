@@ -309,7 +309,7 @@
             </div>
             
             <div class="module-content">
-                <button class="btn btn-large btn-analyze" id="analyzeBtn">
+                <button class="btn btn-large btn-analyze" id="analyzeBtn" onclick="window.performAnalysis && window.performAnalysis()">
                     🌅 开始分析
                 </button>
 
@@ -411,10 +411,25 @@
     </div>
 
     <!-- 模块化 JavaScript -->
-    <script src="app.js"></script>
-
+    <!-- 日照计算核心模块 -->
+    <script src="data/sun-calculations.js"></script>
+    
     <!-- 城市联级菜单模块 -->
     <script src="data/cities-cascade.js"></script>
+    
+    <!-- 应用主逻辑 -->
+    <script src="app.js"></script>
+    
+    <script>
+        // 页面加载检查
+        window.addEventListener('load', function() {
+            console.log('✅ 页面加载完成');
+            console.log('AppState:', typeof AppState);
+            console.log('SunCalculations:', typeof window.SunCalculations);
+            console.log('initCityCascadeMenu:', typeof window.initCityCascadeMenu);
+        });
+    </script>
+    
     <link rel="stylesheet" href="styles-cascade.css">
 </body>
 </html>

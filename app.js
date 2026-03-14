@@ -61,8 +61,8 @@
         // 正午时刻
         const solarNoon = 720 - 4 * lng - EqTime;
         
-        // 昼长（小时）
-        const sunRiseSetHourOffset = (2 / 15) * Math.acos(-Math.tan(rad * lat) * Math.tan(delta));
+        // 昼长（小时）- 修正：delta 是角度，需要转为弧度
+        const sunRiseSetHourOffset = (2 / 15) * Math.acos(-Math.tan(rad * lat) * Math.tan(delta * rad));
         
         const sunriseMin = solarNoon - sunRiseSetHourOffset * 60;
         const sunsetMin = solarNoon + sunRiseSetHourOffset * 60;
@@ -764,42 +764,104 @@
 
         showLoading(true);
 
-        // 计算日照数据
+        // 使用 Web Worker 进行精确计算 (与 test_worker.html 一致)
         const lat = AppState.latitude || 39.9;
         const lng = AppState.longitude || 116.4;
-        const sunData = calculateSunTimes(lat, lng, new Date());
-
-        // 获取阳台类型显示文本
-        const balconyRadio = document.querySelector('input[name="balconyType"]:checked');
-        const balconyTypeName = balconyRadio?.closest('label')?.querySelector('strong')?.textContent || '凸出式阳台';
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
-        // 获取封闭式状态显示文本
-        const enclosedRadio = document.querySelector('input[name="enclosedType"]:checked');
-        const enclosedTypeName = enclosedRadio?.closest('label')?.querySelector('strong')?.textContent || '开放式';
+        console.log('[Sunlight] 创建 Worker 进行精确计算...');
         
-        // 获取遮挡信息
-        let obstructionText = '无';
-        if (AppState.balconyType === 'protruding' && AppState.obstructions.length > 0) {
-            const obsLabels = AppState.obstructions.map(obs => {
-                return obs === 'left' ? '左' : obs === 'right' ? '右' : '上';
-            });
-            obstructionText = `${obsLabels.join(',')}侧`;
-        }
-
-        // 更新结果显示
-        updateAnalysisResults({
-            direction: `${getCardinalDirection(AppState.currentAzimuth)} (${Math.round(AppState.currentAzimuth)}°)`,
-            duration: formatDuration(sunData.dayLength),
-            sunrise: sunData.sunrise,
-            sunset: sunData.sunset,
-            balconyType: balconyTypeName,
-            enclosedType: enclosedTypeName,
-            obstructions: obstructionText,
-            location: `${AppState.province || '未定位'}${AppState.city ? ',' + AppState.city : ''}`,
-            dayLengthMinutes: sunData.dayLength
-        });
-
-        setTimeout(() => showLoading(false), 800);
+        // 准备计算参数 (与 test_worker.html 完全一致)
+        const params = {
+            lat: lat,
+            lon: lng,
+            dateStr: today,
+            azimuth: AppState.currentAzimuth,
+            hasLeftWall: AppState.balconyType === 'protruding' && AppState.obstructions.includes('left'),
+            hasRightWall: AppState.balconyType === 'protruding' && AppState.obstructions.includes('right'),
+            hasRoof: AppState.obstructions.includes('top'),
+            roofDepth: 1.2,
+            windowHeight: 2.0,
+            timeStep: 5
+        };
+        
+        console.log('[Sunlight] 计算参数:', params);
+        
+        // 创建 Worker (使用版本号避免缓存)
+        const worker = new Worker('data/solar_worker.js?v=' + Date.now());
+        
+        // 消息处理
+        worker.onmessage = function(e) {
+            console.log('[Sunlight] Worker 返回:', e.data);
+            
+            const data = e.data;
+            
+            if (data.success) {
+                const result = data.data;
+                console.log('[Sunlight] 计算成功:', result);
+                
+                // 获取阳台类型显示文本
+                const balconyRadio = document.querySelector('input[name="balconyType"]:checked');
+                const balconyTypeName = balconyRadio?.closest('label')?.querySelector('strong')?.textContent || '凸出式阳台';
+                
+                // 获取封闭式状态显示文本
+                const enclosedRadio = document.querySelector('input[name="enclosedType"]:checked');
+                const enclosedTypeName = enclosedRadio?.closest('label')?.querySelector('strong')?.textContent || '开放式';
+                
+                // 获取遮挡信息
+                let obstructionText = '无';
+                if (AppState.balconyType === 'protruding' && AppState.obstructions.length > 0) {
+                    const obsLabels = AppState.obstructions.map(obs => {
+                        return obs === 'left' ? '左' : obs === 'right' ? '右' : '上';
+                    });
+                    obstructionText = `${obsLabels.join(',')}侧`;
+                }
+                
+                // 更新结果显示
+                updateAnalysisResults({
+                    direction: `${getCardinalDirection(AppState.currentAzimuth)} (${Math.round(AppState.currentAzimuth)}°)`,
+                    duration: formatDuration(result.durationHours * 60),
+                    sunrise: result.sunrise,
+                    sunset: result.sunset,
+                    balconyType: balconyTypeName,
+                    enclosedType: enclosedTypeName,
+                    obstructions: obstructionText,
+                    location: `${AppState.province || '未定位'}${AppState.city ? ',' + AppState.city : ''}`,
+                    dayLengthMinutes: result.durationHours * 60
+                });
+                
+                // 关闭 Worker
+                worker.terminate();
+                setTimeout(() => showLoading(false), 800);
+            } else {
+                console.error('[Sunlight] 计算失败:', data.error);
+                showToast('计算出错：' + data.error);
+                worker.terminate();
+                setTimeout(() => showLoading(false), 500);
+            }
+        };
+        
+        // 错误处理
+        worker.onerror = function(e) {
+            console.error('[Sunlight] Worker 错误:', e);
+            showToast('计算引擎错误');
+            setTimeout(() => showLoading(false), 500);
+        };
+        
+        // 发送计算请求
+        worker.postMessage(params);
+        
+        // 超时保护 (15 秒)
+        setTimeout(() => {
+            if (worker) {
+                console.error('[Sunlight] Worker 超时！');
+                worker.terminate();
+                showToast('计算超时，请重试');
+                setTimeout(() => showLoading(false), 500);
+            }
+        }, 15000);
+        
+        // 注意：不再在这里调用 showLoading(false)，由 worker.onmessage 控制
     }
 
     function updateAnalysisResults(data) {
