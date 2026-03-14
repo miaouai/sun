@@ -15,7 +15,13 @@
         longitude: null,             // 经度
         locationMode: 'auto',        // 位置模式：'auto'|'manual'
         cityName: '',                // 城市名称（显示用）
+        manualLat: null,             // 手动选择的纬度
+        manualLng: null,             // 手动选择的经度
+        lastSelectedCity: '',        // 最后选择的城市
     };
+    
+    // ✅ 导出 AppState 供外部模块访问
+    window.AppState = AppState;
 
     // ===== Toast 提示工具 =====
     function showToast(message, duration = 2500) {
@@ -455,13 +461,24 @@
                 // 控制遮挡选项的显示/隐藏
                 if (e.target.value === 'protruding') {
                     obstructionSection.style.display = 'block';
-                    showToast(`已选择：${typeName}`);
+                    // 凸出式阳台：清空所有遮挡选项，让用户重新选择
+                    AppState.obstructions = [];
+                    document.querySelectorAll('input[name="obstruction"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+                    showToast(`已选择：${typeName}（请手动设置遮挡）`);
                 } else {
                     obstructionSection.style.display = 'none';
-                    AppState.obstructions = []; // 清空遮挡
-                    document.querySelectorAll('input[name="obstruction"]').forEach(cb => cb.checked = false);
-                    showToast(`已选择：${typeName}（内嵌式默认全遮挡）`);
+                    // 内嵌式阳台默认三向全遮挡（左、右、上）
+                    AppState.obstructions = ['left', 'right', 'top'];
+                    document.querySelectorAll('input[name="obstruction"]').forEach(cb => {
+                        cb.checked = ['left', 'right', 'top'].includes(cb.value);
+                    });
+                    showToast(`已选择：${typeName}（默认左右上三向遮挡）`);
                 }
+                
+                // 触发遮挡更新以刷新提示
+                updateObstructions();
             });
         });
 
@@ -637,6 +654,12 @@
 
     // 触发 GPS 定位
     function triggerGPSLocation() {
+        // ✅ 重要修复：只在自动模式下执行 GPS 定位
+        if (AppState.locationMode !== 'auto') {
+            console.log('⏸️ [GPS] 当前不是自动模式，跳过 GPS 定位');
+            return;
+        }
+        
         if (!navigator.geolocation) {
             showToast('此浏览器不支持地理定位');
             return;
@@ -654,10 +677,15 @@
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 
-                AppState.latitude = lat;
-                AppState.longitude = lng;
-                
-                updateLocationDisplay(lat, lng, 'GPS: 定位成功');
+                // ✅ 只在自动模式下才覆盖 AppState 坐标
+                if (AppState.locationMode === 'auto') {
+                    AppState.latitude = lat;
+                    AppState.longitude = lng;
+                    
+                    updateLocationDisplay(lat, lng, 'GPS: 定位成功');
+                } else {
+                    console.log('⚠️ [GPS] 定位成功但处于手动模式，不覆盖已选坐标');
+                }
                 
                 if (dot) dot.className = 'indicator-dot active';
                 if (text) text.textContent = 'GPS: 定位成功';
@@ -764,7 +792,10 @@
 
         showLoading(true);
 
-        // 使用 Web Worker 进行精确计算 (与 test_worker.html 一致)
+        // ✅ 调试日志：输出当前使用的坐标
+        console.log(`📍 [分析开始] 当前 AppState: lat=${AppState.latitude}, lng=${AppState.longitude}`);
+        
+        // 使用 Web Worker 进行精确计算
         const lat = AppState.latitude || 39.9;
         const lng = AppState.longitude || 116.4;
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -782,21 +813,47 @@
             hasRoof: AppState.obstructions.includes('top'),
             roofDepth: 1.2,
             windowHeight: 2.0,
-            timeStep: 5
+            timeStep: 5,
+            timezone: 8  // 中国标准时间 UTC+8
         };
         
         console.log('[Sunlight] 计算参数:', params);
+        
+        // ✅ 修复超时逻辑：添加 workerCompleted 标志 + 更强的错误恢复
+        let workerCompleted = false;
+        const timeoutId = setTimeout(() => {
+            if (!workerCompleted) {
+                console.error('[Sunlight] ⚠️ Worker 超时保护触发！');
+                workerCompleted = true;
+                try {
+                    worker.terminate();
+                } catch(e) {
+                    console.error('终止 Worker 失败:', e);
+                }
+                showLoading(false);
+                showToast('计算超时，请重试');
+            }
+        }, 15000);
         
         // 创建 Worker (使用版本号避免缓存)
         const worker = new Worker('data/solar_worker.js?v=' + Date.now());
         
         // 消息处理
         worker.onmessage = function(e) {
-            console.log('[Sunlight] Worker 返回:', e.data);
+            console.log('[Sunlight] 📨 Worker 返回消息:', e.data);
+            
+            if (workerCompleted) {
+                console.warn('[Sunlight] 忽略延迟的消息（已超时）');
+                return;
+            }
+            
+            clearTimeout(timeoutId);
             
             const data = e.data;
             
             if (data.success) {
+                workerCompleted = true;
+                
                 const result = data.data;
                 console.log('[Sunlight] 计算成功:', result);
                 
@@ -817,23 +874,30 @@
                     obstructionText = `${obsLabels.join(',')}侧`;
                 }
                 
-                // 更新结果显示
+                // 更新结果显示 - 传递 periods 和 enclosedType 用于科学评分
                 updateAnalysisResults({
                     direction: `${getCardinalDirection(AppState.currentAzimuth)} (${Math.round(AppState.currentAzimuth)}°)`,
                     duration: formatDuration(result.durationHours * 60),
                     sunrise: result.sunrise,
                     sunset: result.sunset,
+                    solarNoon: result.solarNoon || '--:--',
                     balconyType: balconyTypeName,
-                    enclosedType: enclosedTypeName,
+                    enclosedType: AppState.enclosedType,         // ✅ 新增：实际封闭类型
+                    enclosedTypeName: enclosedTypeName,         // 显示用名称
                     obstructions: obstructionText,
-                    location: `${AppState.province || '未定位'}${AppState.city ? ',' + AppState.city : ''}`,
-                    dayLengthMinutes: result.durationHours * 60
+                    latitude: lat,
+                    longitude: lng,
+                    effectiveHours: result.durationHours,
+                    dayLengthMinutes: result.dayLengthMinutes || (result.durationHours * 60),
+                    periods: result.periods || []  // 时段列表供科学选择
                 });
                 
                 // 关闭 Worker
                 worker.terminate();
                 setTimeout(() => showLoading(false), 800);
             } else {
+                workerCompleted = true;  // ✅ 即使失败也要标记完成
+                
                 console.error('[Sunlight] 计算失败:', data.error);
                 showToast('计算出错：' + data.error);
                 worker.terminate();
@@ -843,6 +907,8 @@
         
         // 错误处理
         worker.onerror = function(e) {
+            workerCompleted = true;  // ✅ 即使错误也要标记完成
+            
             console.error('[Sunlight] Worker 错误:', e);
             showToast('计算引擎错误');
             setTimeout(() => showLoading(false), 500);
@@ -850,18 +916,6 @@
         
         // 发送计算请求
         worker.postMessage(params);
-        
-        // 超时保护 (15 秒)
-        setTimeout(() => {
-            if (worker) {
-                console.error('[Sunlight] Worker 超时！');
-                worker.terminate();
-                showToast('计算超时，请重试');
-                setTimeout(() => showLoading(false), 500);
-            }
-        }, 15000);
-        
-        // 注意：不再在这里调用 showLoading(false)，由 worker.onmessage 控制
     }
 
     function updateAnalysisResults(data) {
@@ -872,81 +926,114 @@
         document.getElementById('resultDuration').textContent = data.duration;
         document.getElementById('resultSunrise').textContent = data.sunrise;
         document.getElementById('resultSunset').textContent = data.sunset;
+        document.getElementById('resultSolarNoon').textContent = data.solarNoon || '--:--';
         document.getElementById('detailBalconyType').textContent = data.balconyType;
         document.getElementById('detailEnclosedType').textContent = data.enclosedType;
         document.getElementById('detailObstructions').textContent = data.obstructions;
-        document.getElementById('detailLocation').textContent = data.location;
         
-        // 计算有效采光时段（简化算法）
-        const effectiveHours = Math.max(0, data.dayLengthMinutes * getEffectiveFactor()) / 60;
-        const effectiveStart = parseFloat(data.sunrise);
-        const effectiveEnd = effectiveStart + effectiveHours;
-        document.getElementById('detailEffectiveTime').textContent = 
-            `${data.sunrise} - ${formatEndTime(effectiveEnd)}`;
+        // 显示经纬度而非位置名称
+        document.getElementById('detailLatitude').textContent = `${data.latitude.toFixed(6)}°`;
+        document.getElementById('detailLongitude').textContent = `${data.longitude.toFixed(6)}°`;
         
-        // 光照评分
-        let score = '⭐⭐⭐';
-        let desc = '采光良好';
-        if (data.dayLengthMinutes > 540) { score = '⭐⭐⭐⭐⭐'; desc = '采光极佳！'; }
-        else if (data.dayLengthMinutes > 420) { score = '⭐⭐⭐⭐'; desc = '采光优秀'; }
-        else if (data.dayLengthMinutes < 240) { score = '⭐'; desc = '采光不足'; }
+        // ✅ 科学方案：展示 Worker 计算的所有有效日照时段（多个时段都显示）
+        let effectiveTimeText;
         
-        document.getElementById('lightScore').innerHTML = `<span style="color:${score.includes('★★★★')?'#FF9500':'inherit'}">${score}</span>`;
-        document.getElementById('summaryRating').innerHTML = `<span class="rating-stars">${score}</span><span class="rating-text">${desc}</span>`;
-        document.getElementById('summaryDesc').textContent = desc;
+        if (Array.isArray(data.periods) && data.periods.length > 0) {
+            // 拼接所有时段，用换行符分隔（每个时段一行）
+            const periodsText = data.periods.map(p => `${p.start} - ${p.end}`).join('\n');
+            effectiveTimeText = periodsText;
+        } else if ((typeof data.effectiveHours === 'number' && data.effectiveHours <= 0) || !data.effectiveHours) {
+            // 没有有效光照
+            effectiveTimeText = '无';
+        } else {
+            // 回退逻辑（理论上不触发，防止数据异常）
+            const sunriseStr = data.sunrise;
+            const [sunriseH, sunriseM] = sunriseStr.split(':').map(Number);
+            const sunriseDecimal = sunriseH + sunriseM / 60;
+            const effectiveEndDecimal = sunriseDecimal + parseFloat(data.effectiveHours);
+            const effectiveEndStr = formatEndTime(effectiveEndDecimal);
+            effectiveTimeText = `${sunriseStr} - ${effectiveEndStr}`;
+        }
+        
+        document.getElementById('detailEffectiveTime').textContent = effectiveTimeText;
+        
+        // ✅ 光照评分 - 考虑封闭程度影响的科学算法 (依据 GB50033-2013)
+        
+        // 封闭程度透光率系数 (基于建筑采光设计标准)
+        const ENCLOSURE_TRANSMISSION = {
+            'open': 1.0,           // 开放式：100% 透光 (基准值)
+            'semi-closed': 0.8,    // 半封闭（纱窗/百叶）：80% 透光
+            'closed-single': 0.7,  // 单层玻璃封闭：70% 透光
+            'closed-double': 0.65, // 双层中空玻璃：65% 透光
+            'closed-low-e': 0.55   // Low-E 镀膜玻璃：55% 透光
+        };
+        
+        // 获取当前封闭类型的透光系数
+        let transmissionCoeff = 1.0;
+        if (data.enclosedType && ENCLOSURE_TRANSMISSION[data.enclosedType]) {
+            transmissionCoeff = ENCLOSURE_TRANSMISSION[data.enclosedType];
+        } else if (typeof data.enclosedTypeName === 'string') {
+            // 兼容字符串类型名称
+            if (data.enclosedTypeName.includes('开放')) transmissionCoeff = 1.0;
+            else if (data.enclosedTypeName.includes('半封闭')) transmissionCoeff = 0.8;
+            else if (data.enclosedTypeName.includes('双层')) transmissionCoeff = 0.65;
+            else if (data.enclosedTypeName.includes('Low-E')) transmissionCoeff = 0.55;
+            else transmissionCoeff = 0.7;  // 默认按普通封闭处理
+        }
+        
+        // 计算等效日照时长（真实感受的采光量）
+        const actualHours = parseFloat(data.effectiveHours) || 0;
+        const effectiveHours = actualHours * transmissionCoeff;
+        
+        // 根据等效时长评分
+        let score = '⭐';
+        let desc = '采光不足';
+        
+        if (effectiveHours >= 7) {
+            score = '⭐⭐⭐⭐⭐';
+            desc = '采光极佳！🌟';
+        } else if (effectiveHours >= 5.5) {
+            score = '⭐⭐⭐⭐';
+            desc = '采光优秀';
+        } else if (effectiveHours >= 4) {
+            score = '⭐⭐⭐';
+            desc = '采光良好';
+        } else if (effectiveHours >= 2.5) {
+            score = '⭐⭐';
+            desc = '采光一般';
+        } else {
+            score = '⭐';
+            desc = '采光不足';
+        }
+        
+        // 显示评分（包含透明提示）
+        document.getElementById('lightScore').innerHTML = 
+            `<span style="color:${score.includes('★★★★')?'#FF9500':'inherit'}">${score} ${transmissionCoeff < 1 ? `(×${(transmissionCoeff*100).toFixed(0)}%)` : ''}</span>`;
+        document.getElementById('summaryRating').innerHTML = 
+            `<span class="rating-stars">${score}</span><span class="rating-text">${desc}</span>`;
+        document.getElementById('summaryDesc').textContent = 
+            `${desc} (${actualHours.toFixed(1)}h → ${effectiveHours.toFixed(1)}h)`;
 
         resultsContainer.style.display = 'block';
         resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    function getEffectiveFactor() {
-        // 根据阳台类型、封闭性、遮挡和朝向估算有效采光比例
-        const azimuth = AppState.currentAzimuth || 0;
-        
-        // 1. 朝向系数（南向最优，北向最差）
-        let orientationFactor = 1;
-        if (azimuth >= 315 || azimuth < 45) orientationFactor = 0.7;      // 北
-        else if (azimuth >= 45 && azimuth < 135) orientationFactor = 0.9;  // 东
-        else if (azimuth >= 135 && azimuth < 225) orientationFactor = 1.1; // 南
-        else orientationFactor = 0.95;                                      // 西
-        
-        // 2. 阳台类型系数
-        let typeFactor = AppState.balconyType === 'protruding' ? 1.35 : 1.0;
-        
-        // 3. 封闭性系数（开放式最优，全封闭最差）
-        let enclosedFactor = 1.0;
-        switch(AppState.enclosedType) {
-            case 'open': enclosedFactor = 1.0; break;          // 完全开放：无损失
-            case 'semi-closed': enclosedFactor = 0.92; break;  // 半封闭：轻微损失
-            case 'closed': enclosedFactor = 0.85; break;       // 全封闭：明显损失
-            default: enclosedFactor = 1.0;
-        }
-        
-        // 4. 遮挡系数（仅凸出式适用）
-        let obstructionFactor = 1.0;
-        if (AppState.balconyType === 'protruding' && AppState.obstructions.length > 0) {
-            // 每个遮挡点减少一定比例
-            const obstructionPenalty = 0.12; // 每个遮挡 -12%
-            obstructionFactor = Math.max(0.6, 1.0 - (AppState.obstructions.length * obstructionPenalty));
-            
-            // 根据朝向动态调整遮挡影响
-            if (azimuth >= 45 && azimuth < 135) { // 朝东
-                if (AppState.obstructions.includes('left')) obstructionFactor -= 0.08; // 左侧遮挡对早晨影响更大
-            } else if (azimuth >= 225 && azimuth < 315) { // 朝西
-                if (AppState.obstructions.includes('right')) obstructionFactor -= 0.08; // 右侧遮挡对下午影响更大
-            }
-        }
-        
-        // 综合计算
-        const finalFactor = orientationFactor * typeFactor * enclosedFactor * obstructionFactor / 1.1;
-        return Math.min(1.2, Math.max(0.5, finalFactor)); // 限制在 [0.5, 1.2] 之间
-    }
-
     function formatEndTime(decimalHour) {
-        decimalHour = decimalHour % 24;
+        decimalHour = ((decimalHour % 24) + 24) % 24;  // 处理负数情况
         const h = Math.floor(decimalHour);
         const m = Math.round((decimalHour - h) * 60);
+        if (m >= 60) {
+            return `${String((h + 1) % 24).padStart(2,'0')}:00`;
+        }
         return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    
+    /**
+     * 将时间字符串 "HH:MM" 转换为从午夜开始的分钟数
+     */
+    function timeToMinutes(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
     }
 
     function showLoading(show) {
