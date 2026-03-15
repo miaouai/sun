@@ -455,12 +455,6 @@
     <!-- 应用主逻辑 -->
     <script src="app.js"></script>
     
-    <!-- ========== 免责声明 ========== -->
-    <div class="disclaimer" style="position: fixed; bottom: 5px; right: 10px; font-size: 11px; color: #888; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 6px; max-width: 280px; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.1); line-height: 1.5;">
-        ⚠️ <strong>声明</strong><br>
-        结果基于用户提供条件测算，受实际环境干扰（如周边建筑变化、天气、季节等）可能存在偏差，仅供科学参考，不作为精确依据。
-    </div>
-    
     <script>
         // 页面加载检查
         window.addEventListener('load', function() {
@@ -470,6 +464,13 @@
             console.log('initCityCascadeMenu:', typeof window.initCityCascadeMenu);
         });
     </script>
+    
+    <!-- ========== 免责声明（页面底部） ========== -->
+    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-top: 1px solid #e0e0e0; font-size: 12px; color: #666; line-height: 1.6;">
+        ⚠️ <strong>免责声明</strong><br>
+        本应用结果基于用户提供的条件进行科学测算，受实际环境因素（如周边建筑变化、天气、季节、遮挡等）影响可能存在偏差。<br>
+        所有数据仅供参考，不作为精确依据或决策建议。
+    </div>
     
     <link rel="stylesheet" href="styles-cascade.css">
 </body>

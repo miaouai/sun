@@ -6,7 +6,7 @@
 
     // ===== 全局状态管理 =====
     const AppState = {
-        currentAzimuth: null,        // 当前朝向角度 (0-360)
+        currentAzimuth: 0,           // 当前朝向角度 (0-360)，默认北向方便测试
         isAutoDetecting: false,      // 是否正在自动检测
         balconyType: 'protruding',   // 阳台类型：protruding|recessed
         enclosedType: 'open',         // 封闭类型：open|semi-closed|closed
@@ -922,13 +922,49 @@
         const resultsContainer = document.getElementById('analysisResults');
         if (!resultsContainer) return;
 
+        // ✅ 添加日期与季节显示
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('zh-CN', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            weekday: 'long'
+        });
+        
+        // 计算季节（北半球）
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        let season = '';
+        let seasonEmoji = '';
+        
+        if (month >= 3 && month <= 5) {
+            season = '春季';
+            seasonEmoji = '🌸';
+        } else if (month >= 6 && month <= 8) {
+            season = '夏季';
+            seasonEmoji = '☀️';
+        } else if (month >= 9 && month <= 11) {
+            season = '秋季';
+            seasonEmoji = '🍂';
+        } else {
+            season = '冬季';
+            seasonEmoji = '❄️';
+        }
+        
+        // 更新今日光照概览标题，添加日期和季节
+        const resultPrimary = document.querySelector('.result-primary h3');
+        if (resultPrimary) {
+            resultPrimary.innerHTML = `今日光照概览 <span style="font-size: 0.85em; color: #888; font-weight: normal;">${dateStr} ${seasonEmoji}${season}</span>`;
+        }
+
         document.getElementById('resultDirection').textContent = data.direction;
         document.getElementById('resultDuration').textContent = data.duration;
         document.getElementById('resultSunrise').textContent = data.sunrise;
         document.getElementById('resultSunset').textContent = data.sunset;
         document.getElementById('resultSolarNoon').textContent = data.solarNoon || '--:--';
         document.getElementById('detailBalconyType').textContent = data.balconyType;
-        document.getElementById('detailEnclosedType').textContent = data.enclosedType;
+        // ✅ 使用中文名显示封闭情况
+        document.getElementById('detailEnclosedType').textContent = data.enclosedTypeName || data.enclosedType;
         document.getElementById('detailObstructions').textContent = data.obstructions;
         
         // 显示经纬度而非位置名称
