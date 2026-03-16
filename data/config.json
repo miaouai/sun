@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "阳台日照分析",
+    "version": "v1.4.1"
+  },
+  "ui": {
+    "sections": {
+      "balconyConfig": {
+        "title": "🏠 阳台配置"
+      },
+      "locationInfo": {
+        "title": "📍 位置信息"
+      },
+      "sunlightAnalysis": {
+        "title": "日照分析"
+      }
+    },
+    "balconyType": {
+      "protruding": "凸阳台（三面采光）",
+      "recessed": "凹阳台（单面采光）",
+      "embedded_left": "L 型左嵌入阳台",
+      "embedded_right": "L 型右嵌入阳台"
+    },
+    "enclosedType": {
+      "open": "开放式阳台",
+      "semi-closed": "半封闭（纱窗/百叶）",
+      "closed-single": "单层玻璃封闭",
+      "closed-double": "双层中空玻璃封闭",
+      "closed-low-e": "Low-E 镀膜玻璃封闭"
+    },
+    "obstructionLabels": {
+      "left": "左侧建筑物遮挡",
+      "right": "右侧建筑物遮挡",
+      "top": "顶部雨蓬/屋檐"
+    }
+  },
+  "location": {
+    "modeSwitch": {
+      "auto": "自动定位",
+      "manual": "手动定位"
+    },
+    "autoPanel": {
+      "title": "GPS 定位",
+      "locating": "🔄 正在获取 GPS 信号...",
+      "success": "🎯 GPS 定位成功！",
+      "failed": "⚠️ GPS 定位失败，请切换到手动模式",
+      "btnRetry": "重新定位"
+    },
+    "manualPanel": {
+      "latitudePlaceholder": "纬度 (如：29.56)",
+      "longitudePlaceholder": "经度 (如：106.55)",
+      "btnApply": "应用坐标"
+    }
+  },
+  "analysis": {
+    "btnStart": "🌅 开始分析",
+    "resultTitle": "今日光照概览",
+    "labels": {
+      "direction": "检测朝向",
+      "duration": "日照时长",
+      "sunrise": "日出时间",
+      "sunset": "日落时间",
+      "solarNoon": "正午时间"
+    },
+    "detailTable": {
+      "balconyType": "阳台类型",
+      "enclosedType": "封闭情况",
+      "obstructions": "周边遮挡",
+      "latitude": "纬度",
+      "longitude": "经度",
+      "effectiveTime": "有效采光时段",
+      "lightScore": "光照评分"
+    },
+    "summary": {
+      "pending": "请点击\"开始分析\"获取完整报告",
+      "excellent": "采光极佳！🌟",
+      "good": "采光优秀",
+      "fair": "采光良好",
+      "average": "采光一般",
+      "poor": "采光不足"
+    },
+    "monthDetailBtn": "📅 查看全年日照详情"
+  },
+  "aiAssistant": {
+    "sectionTitle": "🤖 AI 智能分析助手",
+    "statusReady": "✅ 阳台数据已就绪，点击下方按钮即可向 AI 提问！",
+    "buttons": {
+      "copyPrompt": {
+        "icon": "📋",
+        "text": "复制提示词"
+      },
+      "deepseek": {
+        "icon": "💙",
+        "text": "DeepSeek"
+      },
+      "qwen": {
+        "icon": "🧡",
+        "text": "通义千问"
+      },
+      "doubao": {
+        "icon": "🟣",
+        "text": "豆包"
+      }
+    },
+    "tip": "点击任意平台 → 自动复制完整提示词 → 打开 AI 对话"
+  },
+  "seasons": {
+    "spring": "春季 🌸",
+    "summer": "夏季 ☀️",
+    "autumn": "秋季 🍂",
+    "winter": "冬季 ❄️"
+  },
+  "toast": {
+    "copied": "✅ 完整提示词已复制到剪贴板！点击 AI 平台即可开始对话~",
+    "switchToManual": "已切换至手动定位模式",
+    "switchToAuto": "已切换至自动定位模式"
+  },
+  "errors": {
+    "noPosition": "❌ 请先设置您的位置信息！",
+    "noDirection": "❌ 请先设置阳台朝向！",
+    "calculationFailed": "计算出错："
+  }
+}
