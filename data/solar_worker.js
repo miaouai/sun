@@ -450,29 +450,21 @@ function checkVerticalShading(altitudeDeg, relativeAzimuthDeg, hasRoof, roofDept
         return false; // 完全遮挡
     }
     
-    // 计算有效出挑深度 (考虑斜射效应)
-    // W_eff = roofDepth / cos(ΔA)
-    const cosDiff = Math.cos(relativeAzimuthDeg * DEG_TO_RAD);
-    
-    // 防止除以零
-    if (Math.abs(cosDiff) < 0.001) {
-        return false; // 接近90°，视为遮挡
-    }
-    
-    const effectiveWidth = roofDepth / Math.abs(cosDiff);
-    
-    // 计算临界高度角
-    // h_limit = arctan(W_eff / windowHeight)
-    const limitAngleRad = Math.atan(effectiveWidth / windowHeight);
+    // ✅ 修正：计算临界高度角（不考虑斜射效应，因为雨蓬是水平突出的）
+    // h_limit = arctan(roofDepth / windowHeight)
+    // 这是太阳刚好能照到室内的最小高度角
+    const limitAngleRad = Math.atan(roofDepth / windowHeight);
     const limitAngleDeg = limitAngleRad * RAD_TO_DEG;
     
     log('垂直遮挡: 临界高度角 =', limitAngleDeg.toFixed(2), '°, 当前高度角 =', altitudeDeg.toFixed(2), '°');
     
-    // 判定: 若太阳高度角 < 临界高度角，则被遮挡
+    // ✅ 判定: 若太阳高度角 < 临界高度角，则被雨蓬完全遮挡
     if (altitudeDeg < limitAngleDeg) {
         return false; // 被遮挡
     }
     
+    // ✅ 额外检查：即使高度角够高，如果太阳从侧面来 (>60°)，也可能被部分遮挡
+    // 这里简化处理：只要高度角超过临界值，就认为可以照射进来
     return true; // 无遮挡
 }
 

@@ -4,6 +4,209 @@
 (function() {
     'use strict';
 
+    // ✅ 立即导出全年日照功能（在 IIFE 开始处定义，确保 onclick 可调用）
+    // ===== 全年日照详情功能 =====
+    
+    function showMonthDetail() {
+        const modal = document.getElementById('monthModal');
+        if (!modal) return;
+        
+        const titleEl = document.getElementById('modalMonthTitle');
+        const contentEl = document.getElementById('modalMonthContent');
+        
+        if (!titleEl || !contentEl) return;
+        
+        const year = new Date().getFullYear();
+        titleEl.textContent = `📅 ${year}年全年日照概览`;
+        contentEl.innerHTML = '';
+        
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', 
+                           '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        const colors = {1:'#1565C0',2:'#42A5F5',3:'#F8BBD0',4:'#F06292',5:'#81C784',
+                       6:'#4CAF50',7:'#FFC107',8:'#FFF176',9:'#FFD54F',10:'#FF7043',
+                       11:'#E64A19',12:'#1976D2'};
+        
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px;';
+        
+        for (let m = 1; m <= 12; m++) {
+            const card = document.createElement('button');
+            let season = m>=3&&m<=5?'春季🌸':m>=6&&m<=8?'夏季☀️':m>=9&&m<=11?'秋季🍂':'冬季❄️';
+            card.style.cssText = 'width:100%;padding:20px;background-color:'+colors[m]+';color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;';
+            card.innerHTML = '<span style="font-size:18px;font-weight:bold;">'+monthNames[m-1]+'</span><span style="font-size:12px;opacity:0.9;">'+season+'</span>';
+            card.onclick = () => showMonthDays(m);
+            grid.appendChild(card);
+        }
+        contentEl.appendChild(grid);
+        
+        const hint = document.createElement('p');
+        hint.style.cssText = 'text-align:center;color:#888;font-size:14px;margin-top:20px;';
+        hint.textContent = '点击月份查看该月每日详细日照数据';
+        contentEl.appendChild(hint);
+        
+        modal.style.display = 'flex';
+    }
+    
+    function showMonthDays(month) {
+        const year = new Date().getFullYear();
+        const titleEl = document.getElementById('modalMonthTitle');
+        const descEl = document.getElementById('modalMonthDesc');
+        const contentEl = document.getElementById('modalMonthContent');
+        if (!contentEl) return;
+        
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', 
+                           '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        titleEl.textContent = `📅 ${year}年${monthNames[month-1]}`;
+        descEl.textContent = '点击下方日期查看详细日照分析结果';
+        
+        // ✅ 添加"返回月份选择"按钮
+        const backBtn = document.createElement('button');
+        backBtn.textContent = '← 返回月份选择';
+        backBtn.style.cssText = 'display:inline-block;padding:8px 20px;margin-bottom:15px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;';
+        backBtn.onclick = () => showMonthDetail();
+        contentEl.innerHTML = '';
+        contentEl.appendChild(backBtn);
+        
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const dateGrid = document.createElement('div');
+        dateGrid.id = 'dateGrid';
+        dateGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:8px;margin-bottom:20px;';
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const btn = document.createElement('button');
+            btn.textContent = d;
+            btn.style.cssText = 'width:100%;aspect-ratio:1;border:1px solid #ddd;background:#f8f9fa;border-radius:4px;cursor:pointer;';
+            btn.onmouseover = () => btn.style.background = '#e9ecef';
+            btn.onmouseout = () => btn.style.background = '#f8f9fa';
+            btn.onclick = () => calculateDateSunlight(year, month, d);
+            dateGrid.appendChild(btn);
+        }
+        
+        const resultsContainer = document.createElement('div');
+        resultsContainer.id = 'monthResultsContainer';
+        resultsContainer.style.cssText = 'margin-bottom:20px;';
+        
+        const hint = document.createElement('p');
+        hint.id = 'monthHint';
+        hint.style.cssText = 'text-align:center;color:#888;font-size:14px;margin-top:20px;';
+        hint.textContent = '点击上方日期查看详细日照数据';
+        
+        contentEl.innerHTML = '';
+        contentEl.appendChild(dateGrid);
+        contentEl.appendChild(resultsContainer);
+        contentEl.appendChild(hint);
+    }
+    
+    function calculateDateSunlight(year, month, day) {
+        // ✅ 使用全局变量，如果没有设置则使用默认值（重庆綦江）
+        const lat = parseFloat(window.AppState?.latitude || '29.03');
+        const lng = parseFloat(window.AppState?.longitude || '106.84');
+        const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        
+        // 如果确实没设置位置，提示一下但不阻止计算
+        if (!window.AppState?.latitude || !window.AppState?.longitude) {
+            console.log('[自动使用默认坐标] 重庆綦江: ' + lat + '°N, ' + lng + '°E');
+        }
+        
+        const container = document.getElementById('monthResultsContainer');
+        const hint = document.getElementById('monthHint');
+        if (!container) return;
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = `loading-${dateKey}`;
+        loadingDiv.style.cssText = 'padding:20px;text-align:center;background:#fff3cd;border-radius:8px;margin-bottom:10px;';
+        loadingDiv.innerHTML = '<div class="loading-spinner"></div><p style="color:#856404;margin-top:10px;">正在计算中...</p>';
+        if (hint) hint.parentNode.insertBefore(loadingDiv, hint);
+        else container.appendChild(loadingDiv);
+        
+        const params = {
+            dateStr: dateStr,               // ✅ 使用正确的日期字段
+            lat: parseFloat(lat),           // ✅ 确保是数字
+            lon: parseFloat(lng),           // ✅ 确保是数字
+            azimuth: window.AppState.currentAzimuth || 0,
+            hasLeftWall: window.AppState.balconyType === 'protruding' && (window.AppState.obstructions?.includes('left') || false),
+            hasRightWall: window.AppState.balconyType === 'protruding' && (window.AppState.obstructions?.includes('right') || false),
+            hasRoof: window.AppState.obstructions?.includes('top') || false,
+            roofDepth: 1.2,
+            windowHeight: 2.0,
+            timeStep: 5,
+            timezone: 8  // ✅ 中国标准时间 UTC+8
+        };
+        
+        console.log('[单日计算] 参数:', params);
+        
+        const worker = new Worker('data/solar_worker.js?v=' + Date.now());
+        worker.onmessage = function(e) {
+            const data = e.data;
+            if (data.success) {
+                const r = data.data;  // ✅ Worker 返回的是 data.data，不是 data.result
+                const displayData = {
+                    dateKey,
+                    sunrise: r.sunrise || '--:--',
+                    sunset: r.sunset || '--:--',
+                    solarNoon: r.solarNoon || '--:--',
+                    durationHours: r.durationHours || 0,
+                    periods: r.periods || []
+                };
+                displayDayResult(container, hint, displayData);
+            } else {
+                loadingDiv.remove();
+                if (window.showToast) showToast('计算失败：' + (data.error || '未知错误'));
+            }
+            worker.terminate();
+        };
+        worker.onerror = function() {
+            loadingDiv.remove();
+            if (window.showToast) showToast('Worker 错误');
+        };
+        worker.postMessage(params);
+    }
+    
+    function displayDayResult(container, hint, data) {
+        const loadingId = `loading-${data.dateKey}`;
+        const loadingDiv = document.getElementById(loadingId);
+        if (loadingDiv) loadingDiv.remove();
+        
+        let effectiveTimeText = '无';
+        if (Array.isArray(data.periods) && data.periods.length > 0) {
+            effectiveTimeText = data.periods.map(p => `${p.start} - ${p.end}`).join('\n');
+        }
+        
+        const durationMins = Math.round(data.durationHours * 60);
+        const hours = Math.floor(durationMins / 60);
+        const mins = durationMins % 60;
+        const durationText = `${hours}小时${mins}分钟`;
+        
+        const resultDiv = document.createElement('div');
+        resultDiv.id = `result-${data.dateKey}`;
+        resultDiv.style.cssText = 'background:#f8f9fa;border-left:4px solid #28a745;border-radius:8px;padding:15px;margin-bottom:10px;';
+        resultDiv.innerHTML = `
+            <h4 style="margin:0 0 10px 0;color:#333;font-size:16px;">📅 ${data.dateKey}</h4>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:5px 0;color:#666;">🌅 日出</td><td style="padding:5px 0;font-weight:bold;text-align:right;">${data.sunrise}</td></tr>
+                <tr><td style="padding:5px 0;color:#666;">🌇 日落</td><td style="padding:5px 0;font-weight:bold;text-align:right;">${data.sunset}</td></tr>
+                <tr><td style="padding:5px 0;color:#666;">☀️ 正午</td><td style="padding:5px 0;font-weight:bold;text-align:right;">${data.solarNoon}</td></tr>
+                <tr><td style="padding:5px 0;color:#666;">⏱️ 日照时长</td><td style="padding:5px 0;font-weight:bold;text-align:right;color:#28a745;">${durationText}</td></tr>
+                <tr><td style="padding:5px 0;color:#666;">🕐 有效时段</td><td style="padding:5px 0;text-align:left;white-space:pre-line;font-size:12px;color:#555;">${effectiveTimeText}</td></tr>
+            </table>
+        `;
+        
+        // ✅ 确保最新结果始终显示在日期网格下方第一条位置
+        // 策略：先查找是否已有相同日期的结果，如果有则删除它
+        const existingResult = document.getElementById(`result-${data.dateKey}`);
+        if (existingResult) {
+            existingResult.remove();
+        }
+        
+        // 将新结果插入到 resultsContainer 的开头（紧接在日期网格之后）
+        if (container.firstChild) {
+            container.insertBefore(resultDiv, container.firstChild);
+        } else {
+            container.appendChild(resultDiv);
+        }
+    }
+    
     // ===== 全局状态管理 =====
     const AppState = {
         currentAzimuth: 0,           // 当前朝向角度 (0-360)，默认北向方便测试
@@ -32,6 +235,9 @@
             setTimeout(() => toast.classList.remove('show'), duration);
         }
     }
+    
+    // ✅ 导出 showToast
+    window.showToast = showToast;
 
     // ===== 指南针方向转换 =====
     function getCardinalDirection(angle) {
@@ -1091,4 +1297,126 @@
         setupAnalysisButton();
     });
 
-})();
+    // ==================== 全年日照详情功能 ====================
+    
+    function showMonthDetail() {
+        const modal = document.getElementById('monthModal');
+        if (!modal) return;
+        
+        const titleEl = document.getElementById('modalMonthTitle');
+        const contentEl = document.getElementById('modalMonthContent');
+        
+        if (!titleEl || !contentEl) return;
+        
+        const year = new Date().getFullYear();
+        titleEl.textContent = `📅 ${year}年全年日照概览`;
+        contentEl.innerHTML = '';
+        
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', 
+                           '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        const colors = {1:'#1565C0',2:'#42A5F5',3:'#F8BBD0',4:'#F06292',5:'#81C784',
+                       6:'#4CAF50',7:'#FFC107',8:'#FFF176',9:'#FFD54F',10:'#FF7043',
+                       11:'#E64A19',12:'#1976D2'};
+        
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px;';
+        
+        for (let m = 1; m <= 12; m++) {
+            const card = document.createElement('button');
+            let season = m>=3&&m<=5?'春季🌸':m>=6&&m<=8?'夏季☀️':m>=9&&m<=11?'秋季🍂':'冬季❄️';
+            card.style.cssText = 'width:100%;padding:20px;background-color:'+colors[m]+';color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;';
+            card.innerHTML = '<span style="font-size:18px;font-weight:bold;">'+monthNames[m-1]+'</span><span style="font-size:12px;opacity:0.9;">'+season+'</span>';
+            card.onclick = () => showMonthDays(m);
+            grid.appendChild(card);
+        }
+        contentEl.appendChild(grid);
+        
+        const hint = document.createElement('p');
+        hint.style.cssText = 'text-align:center;color:#888;font-size:14px;margin-top:20px;';
+        hint.textContent = '点击月份查看该月每日详细日照数据';
+        contentEl.appendChild(hint);
+        
+        modal.style.display = 'flex';
+    }
+    
+    function showMonthDays(month) {
+        const year = new Date().getFullYear();
+        const titleEl = document.getElementById('modalMonthTitle');
+        const descEl = document.getElementById('modalMonthDesc');
+        const contentEl = document.getElementById('modalMonthContent');
+        if (!contentEl) return;
+        
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', 
+                           '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        titleEl.textContent = `📅 ${year}年${monthNames[month-1]}`;
+        descEl.textContent = '点击下方日期查看详细日照分析结果';
+        
+        // ✅ 添加"返回月份选择"按钮
+        const backBtn = document.createElement('button');
+        backBtn.textContent = '← 返回月份选择';
+        backBtn.style.cssText = 'display:inline-block;padding:8px 20px;margin-bottom:15px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;';
+        backBtn.onclick = () => showMonthDetail();
+        contentEl.innerHTML = '';
+        contentEl.appendChild(backBtn);
+        
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const dateGrid = document.createElement('div');
+        dateGrid.id = 'dateGrid';
+        dateGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:8px;margin-bottom:20px;';
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const btn = document.createElement('button');
+            btn.textContent = d;
+            btn.style.cssText = 'width:100%;aspect-ratio:1;border:1px solid #ddd;background:#f8f9fa;border-radius:4px;cursor:pointer;';
+            btn.onmouseover = () => btn.style.background = '#e9ecef';
+            btn.onmouseout = () => btn.style.background = '#f8f9fa';
+            btn.onclick = () => calculateDateSunlight(year, month, d);
+            dateGrid.appendChild(btn);
+        }
+        
+        const resultsContainer = document.createElement('div');
+        resultsContainer.id = 'monthResultsContainer';
+        resultsContainer.style.cssText = 'margin-bottom:20px;';
+        
+        const hint = document.createElement('p');
+        hint.id = 'monthHint';
+        hint.style.cssText = 'text-align:center;color:#888;font-size:14px;margin-top:20px;';
+        hint.textContent = '点击上方日期查看详细日照数据';
+        
+        contentEl.innerHTML = '';
+        contentEl.appendChild(dateGrid);
+        contentEl.appendChild(resultsContainer);
+        contentEl.appendChild(hint);
+    }
+
+    // ==================== 全局导出 ====================
+    
+    // ✅ 导出 AppState 供外部模块访问
+    window.AppState = AppState;
+
+    // ✅ 导出 showToast
+    window.showToast = showToast;
+
+    // ✅ 导出全年日照相关函数
+    window.showMonthDetail = showMonthDetail;
+    window.showMonthDays = showMonthDays;
+    window.calculateDateSunlight = calculateDateSunlight;
+    window.displayDayResult = displayDayResult;
+    
+    // ✅ 关闭月份模态框函数（带 ESC 键支持）
+    window.closeMonthModal = function() {
+        const modal = document.getElementById('monthModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    // ✅ ESC 键关闭弹窗
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('monthModal');
+            if (modal && modal.style.display !== 'none') {
+                window.closeMonthModal();
+            }
+        }
+    });
+
+})(); 
