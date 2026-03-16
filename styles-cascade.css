@@ -1,0 +1,201 @@
+/* 联级菜单选择器样式 */
+.city-cascade-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.cascade-select {
+    padding: 10px 16px !important;
+    border: 2px solid #ddd !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    background: white !important;
+    min-width: 140px !important;
+    max-width: 200px !important;
+    height: 44px !important;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cascade-select:focus {
+    border-color: var(--primary-color) !important;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+}
+
+.cascade-select:hover {
+    border-color: var(--primary-light) !important;
+}
+
+/* 手机端优化：单列布局，全宽显示 */
+@media (max-width: 768px) {
+    .city-cascade-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .cascade-select {
+        width: 100% !important;
+        max-width: none !important;
+        font-size: 16px !important; /* 防止 iOS 缩放 */
+    }
+    
+    #cityCascadeContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    #cityCascadeContainer select {
+        width: 100%;
+    }
+}
+
+/* 位置信息模块优化 */
+.location-module {
+    display: flex;
+    flex-direction: column;
+}
+
+.location-module .module-header {
+    justify-content: flex-start;
+}
+
+.location-manual-mode {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.manual-input-section {
+    margin-bottom: 16px;
+}
+
+.manual-input-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.section-icon {
+    font-size: 18px;
+}
+
+.section-header h3 {
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.section-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+/* 城市选择容器 */
+#cityCascadeContainer {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.city-select-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-apply-city {
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* 日照分析新增样式 */
+.rating-details {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+    background: rgba(255, 149, 0, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.rating-details li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.rating-details li:last-child {
+    border-bottom: none;
+}
+
+.rating-details li::before {
+    content: '✓ ';
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.sunlight-window {
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.1), rgba(255, 204, 0, 0.1));
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 12px;
+    border: 2px solid rgba(255, 149, 0, 0.2);
+}
+
+.window-time {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.window-duration {
+    font-size: 15px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.window-quality {
+    font-size: 14px;
+    text-align: center;
+    padding: 4px 12px;
+    background: rgba(255, 149, 0, 0.15);
+    border-radius: 12px;
+    display: inline-block;
+    margin: 0 auto 12px;
+    display: block;
+    width: fit-content;
+}
+
+.window-suggestion {
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: center;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.no-window {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 20px;
+}
