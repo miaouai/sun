@@ -1158,10 +1158,15 @@ body {
    Footer
    ==================== */
 .footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     padding: 24px 0;
     color: var(--text-secondary);
     font-size: 12px;
+    gap: 10px;
 }
 
 .footer p {
@@ -1169,13 +1174,65 @@ body {
 }
 
 .github-link {
-    color: var(--text-primary);
     text-decoration: none;
-    font-weight: 500;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
 }
 
 .github-link:hover {
-    text-decoration: underline;
+    transform: scale(1.1);
+}
+
+.github-link svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.more-info-btn {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    transition: all 0.3s ease;
+}
+
+.more-info-btn:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+/* AI 智能分析助手样式 */
+.ai-assistant-section {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 2px solid #007bff;
+}
+
+.btn-ai-copy,
+.btn-ai-platform {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-ai-copy:hover,
+.btn-ai-platform:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-ai-copy:active,
+.btn-ai-platform:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* ====================

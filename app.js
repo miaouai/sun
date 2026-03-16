@@ -98,9 +98,14 @@
     }
     
     function calculateDateSunlight(year, month, day) {
-        // ✅ 使用全局变量，如果没有设置则使用默认值（重庆綦江）
-        const lat = parseFloat(window.AppState?.latitude || '29.03');
-        const lng = parseFloat(window.AppState?.longitude || '106.84');
+        // ✅ 必须设置位置信息才能计算
+        if (!window.AppState?.latitude || !window.AppState?.longitude) {
+            showToast('❌ 请先设置您的位置信息！');
+            return;
+        }
+        
+        const lat = parseFloat(window.AppState.latitude);
+        const lng = parseFloat(window.AppState.longitude);
         const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         
@@ -125,6 +130,7 @@
             lat: parseFloat(lat),           // ✅ 确保是数字
             lon: parseFloat(lng),           // ✅ 确保是数字
             azimuth: window.AppState.currentAzimuth || 0,
+        // ✅ 注意：如果 currentAzimuth 为 null，这里会是 NaN，需要后续验证
             hasLeftWall: window.AppState.balconyType === 'protruding' && (window.AppState.obstructions?.includes('left') || false),
             hasRightWall: window.AppState.balconyType === 'protruding' && (window.AppState.obstructions?.includes('right') || false),
             hasRoof: window.AppState.obstructions?.includes('top') || false,
@@ -207,20 +213,20 @@
         }
     }
     
-    // ===== 全局状态管理 =====
+    // ===== 全局状态管理（无默认值）=====
     const AppState = {
-        currentAzimuth: 0,           // 当前朝向角度 (0-360)，默认北向方便测试
-        isAutoDetecting: false,      // 是否正在自动检测
-        balconyType: 'protruding',   // 阳台类型：protruding|recessed
-        enclosedType: 'open',         // 封闭类型：open|semi-closed|closed
-        obstructions: [],            // 遮挡列表：['left', 'right', 'top']
-        latitude: null,              // 纬度
-        longitude: null,             // 经度
-        locationMode: 'auto',        // 位置模式：'auto'|'manual'
-        cityName: '',                // 城市名称（显示用）
-        manualLat: null,             // 手动选择的纬度
-        manualLng: null,             // 手动选择的经度
-        lastSelectedCity: '',        // 最后选择的城市
+        currentAzimuth: null,           // ✅ 必须手动设置阳台朝向角度 (0-360)
+        isAutoDetecting: false,         // 是否正在自动检测
+        balconyType: 'protruding',      // 阳台类型：protruding|recessed|embedded_left|embedded_right
+        enclosedType: 'open',           // 封闭类型：open|semi-closed|closed-single|closed-double|closed-low-e
+        obstructions: [],               // 遮挡列表：['left', 'right', 'top']
+        latitude: null,                 // ✅ 必须手动设置纬度
+        longitude: null,                // ✅ 必须手动设置经度
+        locationMode: null,             // 位置模式：'auto'|'manual'|'city'
+        cityName: '',                   // 城市名称（显示用）
+        manualLat: null,                // 手动选择的纬度
+        manualLng: null,                // 手动选择的经度
+        lastSelectedCity: ''            // 最后选择的城市
     };
     
     // ✅ 导出 AppState 供外部模块访问
@@ -784,8 +790,8 @@
 
         // 模式切换逻辑
         modeSwitchBtn.addEventListener('click', () => {
-            if (AppState.locationMode === 'auto') {
-                // 切换到手动模式
+            if (AppState.locationMode === 'auto' || AppState.locationMode === null) {
+                // 切换到手动模式（包括初始状态）
                 AppState.locationMode = 'manual';
                 modeText.textContent = '手动定位';
                 modeSwitchBtn.classList.add('manual-mode');
@@ -990,20 +996,27 @@
     }
 
     function performSunlightAnalysis() {
-        // 验证必要数据
+        // ✅ 必须设置阳台朝向才能开始分析
         if (AppState.currentAzimuth === null || AppState.currentAzimuth === undefined) {
-            showToast('请先设置阳台朝向');
+            showToast('❌ 请先设置阳台朝向！');
             return;
         }
 
         showLoading(true);
 
+        // ✅ 验证坐标必须已设置
+        if (!AppState.latitude || !AppState.longitude) {
+            console.error('[Sunlight] ⚠️ 位置信息未设置！');
+            showLoading(false);
+            showToast('❌ 请先设置您的位置信息（经纬度）');
+            return;
+        }
+
         // ✅ 调试日志：输出当前使用的坐标
         console.log(`📍 [分析开始] 当前 AppState: lat=${AppState.latitude}, lng=${AppState.longitude}`);
         
-        // 使用 Web Worker 进行精确计算
-        const lat = AppState.latitude || 39.9;
-        const lng = AppState.longitude || 116.4;
+        const lat = parseFloat(AppState.latitude);
+        const lng = parseFloat(AppState.longitude);
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
         console.log('[Sunlight] 创建 Worker 进行精确计算...');
@@ -1257,6 +1270,13 @@
             `${desc} (${actualHours.toFixed(1)}h → ${effectiveHours.toFixed(1)}h)`;
 
         resultsContainer.style.display = 'block';
+        
+        // ✅ 显示 AI 智能分析助手模块
+        const aiSection = document.getElementById('aiAssistantSection');
+        if (aiSection) {
+            aiSection.style.display = 'block';
+        }
+        
         resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -1295,6 +1315,7 @@
         setupBalconyConfig();
         setupLocationModule();  // 使用新的位置模块函数
         setupAnalysisButton();
+        setupMoreInfoModule();  // ✅ 添加了解更多模块
     });
 
     // ==================== 全年日照详情功能 ====================
@@ -1418,5 +1439,262 @@
             }
         }
     });
+
+    // ==================== 了解更多模块 ====================
+    
+    /**
+     * 生成完整的阳台分析提示词
+     */
+    function generateSunlightPrompt() {
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        
+        // 收集基础数据
+        const lat = window.AppState?.latitude || '未设置';
+        const lng = window.AppState?.longitude || '未设置';
+        const azimuth = window.AppState?.currentAzimuth ?? '未检测';
+        const balconyType = window.AppState?.balconyType || '未知';
+        const obstructions = window.AppState?.obstructions || [];
+        
+        // 阳台类型描述
+        let balconyDesc = '';
+        switch(balconyType) {
+            case 'protruding': balconyDesc = '凸阳台（三面采光）'; break;
+            case 'recessed': balconyDesc = '凹阳台（单面采光）'; break;
+            case 'embedded_left': balconyDesc = 'L型左嵌入阳台'; break;
+            case 'embedded_right': balconyDesc = 'L型右嵌入阳台'; break;
+            default: balconyDesc = '普通阳台';
+        }
+        
+        // 遮挡描述
+        let obstructionText = '无明显遮挡';
+        if (obstructions.length > 0) {
+            obstructionText = obstructions.map(o => {
+                switch(o) {
+                    case 'left': return '左侧有建筑物';
+                    case 'right': return '右侧有建筑物';
+                    case 'top': return '顶部有雨蓬或屋檐';
+                    default: return o;
+                }
+            }).join('、');
+        }
+        
+        const prompt = `【阳台日照智能分析报告请求】
+
+=== 基础位置信息 ===
+📍 经纬度：${lat}°N, ${lng}°E
+📅 当前日期：${dateStr}
+🧭 阳台朝向：${azimuth}°（${getCompassDirection(azimuth)}）
+🏠 阳台类型：${balconyDesc}
+🚧 遮挡情况：${obstructionText}
+
+=== 分析任务清单 ===
+
+## 任务 1：今日太阳运动数据（请用表格输出）
+请计算并展示以下信息，使用 Markdown 表格格式：
+
+| 时间参数 | 具体数值 | 说明 |
+|---------|---------|------|
+| 日出时间 | ? | HH:MM 格式 |
+| 正午时间 | ? | 太阳最高点 |
+| 日落时间 | ? | HH:MM 格式 |
+| 总日照时长 | ? | 小时数 |
+| 有效采光时段 | ? | 考虑遮挡后的实际可用时间 |
+
+同时提供按小时的太阳高度角变化表：
+| 时刻 | 太阳高度角 | 是否可晒太阳 |
+|------|----------|-------------|
+| 06:00 | ? | 是/否 |
+| ... | ... | ... |
+| 18:00 | ? | 是/否 |
+
+## 任务 2：全年日照统计预测（请用表格输出）
+
+请提供月度对比表：
+| 月份 | 平均日照时长 | 最佳利用天数 | 建议活动 |
+|-----|------------|------------|---------|
+| 1 月 | ? | ?天 | ? |
+| 2 月 | ? | ?天 | ? |
+| ... | ... | ... | ... |
+| 12 月 | ? | ?天 | ? |
+
+并提供季度总结：
+| 季节 | 优势 | 劣势 | 最佳用途 |
+|------|-----|------|---------|
+| 春季 | ? | ? | ? |
+| 夏季 | ? | ? | ? |
+| 秋季 | ? | ? | ? |
+| 冬季 | ? | ? | ? |
+
+## 任务 3：阳台功能适配建议（请按分类回答）
+
+### 🌱 植物种植推荐
+- **强烈推荐的植物**（列出 5-8 种，标注所需日照时长）
+- **不推荐的植物**（原因说明）
+- **各季节种植时间表**
+
+### 🧺 晾晒衣物分析
+| 季节 | 晾衣适宜度 | 最佳时段 | 注意事项 |
+|------|-----------|---------|---------|
+| 春季 | 高/中/低 | ? | ? |
+| 夏季 | 高/中/低 | ? | ? |
+| 秋季 | 高/中/低 | ? | ? |
+| 冬季 | 高/中/低 | ? | ? |
+- 全年可晒被褥天数估算：?天
+
+### ☕ 休闲使用建议
+- 最佳休息时段（工作日/周末）
+- 舒适度评分（1-10 分）
+- 需要避开的时段及原因
+
+### 🔧 改造优化建议
+- 低成本改善方案（预算<500 元）
+- 中等投入方案（预算 500-3000 元）
+- 专业改造方案（预算>3000 元）
+
+## 任务 4：综合评分与结论
+
+请以星级评分形式总结：
+| 评估维度 | 评分 | 理由 |
+|---------|-----|------|
+| 日照充足度 | ⭐⭐⭐⭐⭐ | ? |
+| 四季均衡性 | ⭐⭐⭐⭐⭐ | ? |
+| 晾晒实用性 | ⭐⭐⭐⭐⭐ | ? |
+| 种植适宜度 | ⭐⭐⭐⭐⭐ | ? |
+| 休闲舒适度 | ⭐⭐⭐⭐⭐ | ? |
+| **综合推荐指数** | ⭐⭐⭐⭐⭐ | ? |
+
+=== 输出要求 ===
+- 所有数据和对比必须用表格呈现
+- 文字解释要简洁实用
+- 结合中国气候特点给出具体建议
+- 避免空泛理论，多给可操作性强的建议`;
+
+        return prompt;
+    }
+    
+    /**
+     * 获取方位描述
+     */
+    function getCompassDirection(angle) {
+        if (angle === null || angle === undefined) return '未知';
+        angle = parseFloat(angle);
+        if (isNaN(angle)) return '无效';
+        
+        const directions = [
+            { name: '北', range: [337.5, 22.5] },
+            { name: '东北', range: [22.5, 67.5] },
+            { name: '东', range: [67.5, 112.5] },
+            { name: '东南', range: [112.5, 157.5] },
+            { name: '南', range: [157.5, 202.5] },
+            { name: '西南', range: [202.5, 247.5] },
+            { name: '西', range: [247.5, 292.5] },
+            { name: '西北', range: [292.5, 337.5] }
+        ];
+        
+        for (const dir of directions) {
+            const [min, max] = dir.range;
+            if ((angle >= min && angle <= max) || 
+                (min > max && (angle >= min || angle <= max))) {
+                return dir.name;
+            }
+        }
+        return '北';
+    }
+    
+    /**
+     * 复制提示词到剪贴板
+     */
+    async function copyPromptToClipboard() {
+        const prompt = generateSunlightPrompt();
+        try {
+            await navigator.clipboard.writeText(prompt);
+            showToast('✅ 提示词已复制到剪贴板！');
+            return true;
+        } catch (err) {
+            console.error('复制失败:', err);
+            // 降级方案
+            const textArea = document.createElement('textarea');
+            textArea.value = prompt;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('✅ 提示词已复制到剪贴板！');
+                return true;
+            } catch (e) {
+                showToast('❌ 复制失败，请手动复制');
+                return false;
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+    }
+    
+    /**
+     * 打开 AI 平台（根据设备类型选择网页或 APP）
+     */
+    window.openAIPlatform = async function(platform) {
+        // 先复制提示词
+        const success = await copyPromptToClipboard();
+        if (!success) {
+            setTimeout(() => openPlatformLink(platform), 1000);
+            return;
+        }
+        
+        // 延迟打开链接，让用户看到复制成功的提示
+        setTimeout(() => openPlatformLink(platform), 800);
+    };
+    
+    /**
+     * 根据平台打开对应链接
+     */
+    function openPlatformLink(platform) {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobile = /android|iphone|ipad|mobile/.test(ua);
+        
+        let url = '';
+        let appScheme = '';
+        
+        switch(platform) {
+            case 'deepseek':
+                url = 'https://chat.deepseek.com/';
+                appScheme = 'deepseek://';
+                break;
+            case 'qwen':
+                url = 'https://tongyi.aliyun.com/qianwen/';
+                appScheme = 'tongyi://';
+                break;
+            case 'doubao':
+                url = 'https://www.doubao.com/chat/';
+                appScheme = 'doubao://';
+                break;
+        }
+        
+        if (isMobile) {
+            // 尝试打开 APP，失败则打开网页
+            window.location.href = appScheme;
+            setTimeout(() => {
+                // 如果没打开 APP，跳转到网页
+                if (document.hidden) {
+                    window.location.href = url;
+                }
+            }, 500);
+        } else {
+            // 电脑版直接打开网页
+            window.open(url, '_blank');
+        }
+    }
+    
+    /**
+     * 初始化 AI 助手模块
+     */
+    function setupMoreInfoModule() {
+        const copyBtn = document.getElementById('copyPromptBtn');
+        
+        if (copyBtn) {
+            copyBtn.onclick = copyPromptToClipboard;
+        }
+    }
 
 })(); 
