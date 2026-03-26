@@ -862,6 +862,29 @@
             // TODO: 已迁移到 cities-cascade.js 模块，不再使用老式单选框
             console.log('🏙️ [位置模块] 使用新的联级菜单系统');
         }
+
+        // ✅ 修复：初始化时检测默认面板，自动设置模式并触发定位
+        // 如果 autoPanel 可见（默认情况），则设置 mode 为 auto 并触发 GPS
+        if (autoPanel && manualPanel) {
+            const autoVisible = autoPanel.style.display !== 'none';
+            const manualVisible = manualPanel.style.display !== 'none';
+            
+            if (autoVisible && !manualVisible) {
+                console.log('🌍 [位置模块] 初始化：检测到自动面板显示，设置模式为 auto 并触发定位');
+                AppState.locationMode = 'auto';
+                
+                // 立即触发一次 GPS 定位（延迟 100ms 确保 DOM 就绪）
+                setTimeout(triggerGPSLocation, 100);
+            } else if (manualVisible && !autoVisible) {
+                console.log('🌍 [位置模块] 初始化：检测到手面板显示，设置模式为 manual');
+                AppState.locationMode = 'manual';
+            } else {
+                // 默认安全选择：自动模式
+                console.log('🌍 [位置模块] 初始化：面板状态不明确，默认使用 auto 模式');
+                AppState.locationMode = 'auto';
+                setTimeout(triggerGPSLocation, 100);
+            }
+        }
     }
 
     // 触发 GPS 定位
